@@ -1,0 +1,19 @@
+#!/usr/bin/env zsh
+
+# Kill the walker gapplication service to ensure a clean state.
+pkill -f "walker --gapplication-service"
+
+# Restart elephant and walker services.
+systemctl --user restart elephant.service
+systemctl --user restart walker.service
+
+# Wait for the services to be active.
+while ! systemctl --user is-active --quiet elephant.service; do
+  sleep 0.1
+done
+while ! systemctl --user is-active --quiet walker.service; do
+  sleep 0.1
+done
+
+# Execute walker
+walker "$@"

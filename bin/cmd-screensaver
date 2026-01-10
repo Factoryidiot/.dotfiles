@@ -1,0 +1,50 @@
+#!/usr/bin/env zsh
+
+screensaver_in_focus() {
+  hyprctl activewindow -j | jq -e '.class == "dot.nix.screensaver"' >/dev/null 2>&1
+}
+
+exit_screensaver() {
+  # Restore terminal and cursor state
+  stty echo 2>/dev/null
+  hyprctl keyword cursor:invisible false &>/dev/null || true
+  
+  # Kill processes
+  pkill -P $$ 2>/dev/null
+  #pkill -x tte 2>/dev/null
+  pkill -f dot.nix.screensaver 2>/dev/null
+  
+  # Reset terminal background (optional - resets to default)
+  printf '\033]111\007' 
+  
+  exit 0
+}
+
+# Exit the screensaver on signals and input
+trap exit_screensaver SIGINT SIGTERM SIGHUP SIGQUIT
+
+# 1. Set terminal state
+printf '\033]11;rgb:00/00/00\007'  # Black background
+hyprctl keyword cursor:invisible true &>/dev/null
+stty -echo # Disable echoing of input keys
+
+while true; do
+  # Run tte in the background
+  tte -i ~/.dotfiles/bin/screensaver.txt \
+    --frame-rate 60 \
+    --canvas-width 0 --canvas-height 0 \
+    --reuse-canvas --anchor-canvas c --anchor-text c \
+    --random-effect --exclude-effects dev_worm \
+    --no-eol --no-restore-cursor &
+
+  tte_pid=$!
+
+  # Wait for process end OR input/focus loss
+  while kill -0 $tte_pid 2>/dev/null; do
+    # Zsh uses -k 1 instead of -n1
+    if read -rs -k 1 -t 0.1 || ! screensaver_in_focus; then
+      kill $tte_pid 2>/dev/null
+      exit_screensaver
+    fi
+  done
+done

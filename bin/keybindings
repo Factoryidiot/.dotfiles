@@ -1,0 +1,137 @@
+#!/usr/bin/env zsh
+
+# Fetch dynamic keybindings from Hyprland and map modmask in one go with jq
+dynamic_bindings() {
+  hyprctl -j binds | jq -r '
+    .[] | 
+    (.modmask | 
+      if . == 0 then "" 
+      elif . == 1 then "SHIFT" 
+      elif . == 4 then "CTRL" 
+      elif . == 5 then "SHIFT CTRL" 
+      elif . == 8 then "ALT" 
+      elif . == 9 then "SHIFT ALT" 
+      elif . == 12 then "CTRL ALT" 
+      elif . == 13 then "SHIFT CTRL ALT" 
+      elif . == 64 then "SUPER" 
+      elif . == 65 then "SUPER SHIFT" 
+      elif . == 68 then "SUPER CTRL" 
+      elif . == 69 then "SUPER SHIFT CTRL" 
+      elif . == 72 then "SUPER ALT" 
+      elif . == 73 then "SUPER SHIFT ALT" 
+      elif . == 76 then "SUPER CTRL ALT" 
+      elif . == 77 then "SUPER SHIFT CTRL ALT" 
+      else .|tostring end
+    ) as $mod |
+    "\($mod),\(.key)@\(.keycode),\(.description),\(.dispatcher),\(.arg)"' |
+    sed -r \
+      -e 's/null//g' \
+      -e 's,uwsm app -- ,,g' \
+      -e 's,uwsm-app -- ,,g' \
+      -e 's/@0//g' \
+      -e 's/,@/,code:/g'
+}
+
+static_bindings() {
+    echo "SHIFT ALT,L,Copy URL from Web App,extension,copy-url"
+}
+
+parse_bindings() {
+  awk -F, '
+  {
+    # Combine the modifier and key
+    key_combo = $1 ($1 != "" && $2 != "" ? " + " : "") $2;
+    gsub(/^[ \t]+|[ \t]+$/, "", key_combo);
+
+    action = $3;
+    if (action == "") {
+        for (i = 4; i <= NF; i++) {
+            action = action $i (i < NF ? "," : "");
+        }
+        sub(/,$/, "", action);
+        gsub(/(^|,)[[:space:]]*exec[[:space:]]*,?/, "", action);
+        gsub(/^[ \t]+|[ \t]+$/, "", action);
+    }
+
+    # ONLY print if we have an actual action and combo to avoid blank padded lines
+    if (action != "" && key_combo != "") {
+        # Escape XML entities for safety
+        gsub(/&/, "\\&amp;", action);
+        gsub(/</, "\\&lt;", action);
+        gsub(/>/, "\\&gt;", action);
+        printf "%-35s → %s\n", key_combo, action;
+    }
+  }'
+}
+
+prioritize_entries() {
+  awk '
+  {
+    line = $0
+    # Create a lowercase version for comparison
+    l_line = tolower(line)
+    
+    prio = 100
+    section = "Other"
+
+    # 1. Launchers (Apps & Webapps)
+    if (l_line ~ /terminal|walker|file manager|browser|password|notes|youtube|gmail/) {
+        prio = 10; section = "Launchers"
+    }
+    # 2. Window Management (Focus, Resize, Move, States)
+    else if (l_line ~ /killactive|fullscreen|togglefloating|movefocus|movewindow|resizeactive|resizewindow|mouse:/) {
+        prio = 20; section = "Window Management"
+    }
+    # 3. Workspaces (Navigating and Moving windows)
+    else if (l_line ~ /workspace/) {
+        prio = 30; section = "Workspace Management"
+    }
+    # 4. Clipboard (Your Universal shortcuts and Walker clipboard)
+    else if (l_line ~ /universal|copy|paste|cut|clipboard/) {
+        prio = 40; section = "Clipboard"
+    }
+    # 5. Hardware Keys (Audio, Brightness, Media)
+    else if (l_line ~ /volume|mute|brightness|next|prev|pause|play|xf86/) {
+        prio = 50; section = "Hardware"
+    }
+    # 6. Session Management
+    else if (l_line ~ /exit|lock screen|idle/) {
+        prio = 60; section = "Session"
+    }
+
+    # Print the priority and section for the next sort stage
+    printf "%d\t%s\t%s\n", prio, section, line
+  }' | sort -k1,1n -k2,2
+}
+
+output_keybindings() {
+  {
+    dynamic_bindings
+    static_bindings
+  } |
+    sort -u |
+    parse_bindings |
+    prioritize_entries |
+    awk -F'\t' '
+      BEGIN { current_section = "" }
+      {
+          section = $2
+          content = $3
+          if (content == "") next; # Skip truly empty lines
+          
+          if (section != current_section) {
+              current_section = section
+              if (NR > 1) print "" # Add one blank line between SECTIONS only
+              print "\033[1;34m" current_section "\033[0m" # Bold Blue Header
+          }
+          print "  " content
+      }
+    '
+}
+
+if [[ "$1" == "--print" || "$1" == "-p" ]]; then
+  output_keybindings
+else
+  # Use --trim to ensure gum doesnt add extra padding itself
+  output_keybindings | gum pager --show-line-numbers=false
+fi

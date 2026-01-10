@@ -1,0 +1,4 @@
+#!/usr/bin/env zsh
+
+APP_CLASS="dot.nix.$(basename $1)"
+exec setsid uwsm-app -- alacritty --class "$APP_CLASS" -e "$1" "${@:2}"

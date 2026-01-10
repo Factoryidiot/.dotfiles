@@ -1,0 +1,16 @@
+#!/usr/bin/env zsh
+
+# Get the default browser's .desktop file name
+browser_desktop_file=$(xdg-settings get default-web-browser)
+
+case $browser_desktop_file in
+firefox* )
+    # Launch Firefox directly with the dedicated WebApp profile
+    exec setsid uwsm-app -- firefox --no-remote -P "WebApps" --new-window --class WebApp "$1" "${@:2}"
+    ;;
+*)
+    # For other browsers, extract the executable name from the .desktop file
+    browser_executable=${browser_desktop_file%.desktop}
+    exec setsid uwsm-app -- "$browser_executable" --app="$1" "${@:2}"
+    ;;
+esac

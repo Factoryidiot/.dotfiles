@@ -1,0 +1,17 @@
+#!/usr/bin/env zsh
+
+# Launch the default editor as determined by $EDITOR (or nvim if missing).
+# Starts suitable editors in a terminal window and otherwise as a regular application.
+
+if ! command -v "$EDITOR" >/dev/null 2>&1; then
+  EDITOR=nvim
+fi
+
+case "$EDITOR" in
+nvim | vim)
+  exec launch-tui "$EDITOR" "$@"
+  ;;
+*)
+  exec setsid uwsm-app -- "$EDITOR" "$@"
+  ;;
+esac

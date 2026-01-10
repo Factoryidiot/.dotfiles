@@ -1,0 +1,4 @@
+#!/usr/bin/env zsh
+
+rfkill unblock bluetooth
+launch-or-focus-tui bluetui

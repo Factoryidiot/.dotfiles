@@ -1,0 +1,8 @@
+#!/usr/bin/env zsh
+
+# This script is likely no longer needed, as the main 'launch-walker'
+# script now correctly handles the systemd services.
+# This has been commented out for testing and should be removed if the
+# menu continues to work correctly.
+#systemctl --user restart elephant.service
+#systemctl --user restart app-walker@autostart.service

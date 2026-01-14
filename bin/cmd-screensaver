@@ -6,17 +6,16 @@ screensaver_in_focus() {
 
 exit_screensaver() {
   # Restore terminal and cursor state
-  stty echo 2>/dev/null
   hyprctl keyword cursor:invisible false &>/dev/null || true
+  #hyprctl reload false &>/dev/null || true
   
   # Kill processes
   pkill -P $$ 2>/dev/null
-  #pkill -x tte 2>/dev/null
   pkill -f dot.nix.screensaver 2>/dev/null
   
   # Reset terminal background (optional - resets to default)
   printf '\033]111\007' 
-  
+
   exit 0
 }
 
@@ -28,6 +27,7 @@ printf '\033]11;rgb:00/00/00\007'  # Black background
 hyprctl keyword cursor:invisible true &>/dev/null
 stty -echo # Disable echoing of input keys
 
+  hyprctlse keyword cursor:invisible false &>/dev/null || true
 while true; do
   # Run tte in the background
   tte -i ~/.dotfiles/bin/screensaver.txt \

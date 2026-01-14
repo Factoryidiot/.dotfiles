@@ -51,7 +51,7 @@ show_learn_menu() {
   local selection
   selection=$(menu "Learn" "  Keybindings\n  Home-Manager\n  Hyprland\n  Neovim\n  Nixos\n󱆃  Zsh")
   case "$selection" in
-  *Keybindings*) launch-or-focus-tui keybindings ;;
+  *Keybindings*) launch-or-focus-tui display-keybindings ;;
   *Home-Manager*) launch-webapp "https://home-manager-options.extranix.com/" ;;
   *Hyprland*) launch-webapp "https://wiki.hypr.land/" ;;
   *Neovim*) launch-webapp "https://www.lazyvim.org/keymaps" ;;

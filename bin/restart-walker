@@ -1,6 +1,6 @@
 #!/usr/bin/env zsh
 
-# This script is likely no longer needed, as the main 'launch-walker'
+# This script is likely no longer needed, as the main 'launch-menu-applications'
 # script now correctly handles the systemd services.
 # This has been commented out for testing and should be removed if the
 # menu continues to work correctly.

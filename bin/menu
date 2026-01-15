@@ -31,7 +31,7 @@ menu() {
     fi
   fi
 
-  echo -e "$options" | launch-walker --dmenu --width 295 --minheight 1 --maxheight 630 -p "$prompt…" "${args[@]}"
+  echo -e "$options" | launch-menu-applications --dmenu --width 295 --minheight 1 --maxheight 630 -p "$prompt…" "${args[@]}"
 }
 
 terminal() {
@@ -142,7 +142,7 @@ show_style_menu() {
 }
 
 show_theme_menu() {
-  launch-walker -m menus:omarchythemes --width 800 --minheight 400
+  launch-menu-applications -m menus:omarchythemes --width 800 --minheight 400
 }
 
 show_font_menu() {
@@ -465,7 +465,7 @@ show_main_menu() {
 
   case "$lower_selection" in
   *apps*) 
-    launch-walker -p "Launch…"
+    launch-menu-applications -p "Launch…"
     ;; 
   *learn*) show_learn_menu ;;
   *trigger*) show_trigger_menu ;;

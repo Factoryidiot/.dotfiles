@@ -45,7 +45,7 @@ prefix = "$"
 provider = "clipboard"
 
 # The emergency action below was added for debugging and is likely no longer
-# necessary, as the main 'launch-walker' script now correctly handles the
+# necessary, as the main 'launch-menu-applications' script now correctly handles the
 # systemd services. This can be removed if the menu continues to work correctly.
 #
 # [[emergencies]]

@@ -1,4 +1,9 @@
-@import "../../../../../../../.config/omarchy/current/theme/walker.css";
+@define-color selected-text #81a1c1;
+@define-color text #d8dee9;
+@define-color base #2e3440;
+@define-color border #d8dee9;
+@define-color foreground #d8dee9;
+@define-color background #2e3440;
 
 * {
   all: unset;
@@ -6,7 +11,7 @@
 
 * {
   font-family: monospace;
-  font-size: 18px;
+  font-size: 14px;
   color: @text;
 }
 

@@ -1,0 +1,47 @@
+#!/usr/bin/env zsh
+
+# --- Configuration ---
+PERSISTENT_HOME="/persistent/home/rhys"
+VM_DIR="$PERSISTENT_HOME/VMs"
+# ---
+
+# --- JQ Scripts ---
+JQ_RELEASE_SCRIPT='.[] | select(.OS == $os) | .Release'
+JQ_EDITION_SCRIPT='.[] | select(.OS == $os and .Release == $release) | .Option'
+
+# Get the list of operating systems from quickget
+os_list=$(gum spin --title "Fetching operating systems..." -- zsh -c "quickget --list-json | jq -r '.[].OS' | sort -u")
+
+# Create a table of operating systems
+selected_os=$(echo -e "Operating System\n$os_list" | gum table)
+
+# If the user selected an OS, prompt for the release
+if [ -n "$selected_os" ]; then
+  release_list=$(gum spin --title "Fetching releases for $selected_os..." -- zsh -c "quickget --list-json | jq -r --arg os \"$selected_os\" '$JQ_RELEASE_SCRIPT' | sort -u")
+  selected_release=$(echo -e "Release\n$release_list" | gum table)
+
+  # If the user selected a release, prompt for the edition
+  if [ -n "$selected_release" ]; then
+    edition_list=$(gum spin --title "Fetching editions for $selected_os $selected_release..." -- zsh -c "quickget --list-json | jq -r --arg os \"$selected_os\" --arg release \"$selected_release\" '$JQ_EDITION_SCRIPT' | sort -u")
+
+    # Ensure the VM directory exists
+    mkdir -p "$VM_DIR"
+    # Change to the VM directory before running quickget
+    pushd "$VM_DIR" > /dev/null
+
+    # If there are no editions, just run quickget
+    if [ -z "$edition_list" ]; then
+      quickget "$selected_os" "$selected_release"
+    else
+      selected_edition=$(echo -e "Edition\n$edition_list" | gum table)
+      if [ -n "$selected_edition" ]; then
+        quickget "$selected_os" "$selected_release" "$selected_edition"
+      fi
+    fi
+    # Change back to the original directory
+    popd > /dev/null
+  fi
+fi
+
+echo
+read "REPLY?Press Enter to close window..."

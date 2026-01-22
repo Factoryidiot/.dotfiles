@@ -160,7 +160,7 @@ show_setup_menu() {
   local options="  Audio\n  Wifi\n󰂯  Bluetooth\n󱐋  Power Profile\n󰍹  Monitors"
   [ -f ~/.dotfiles/hypr/keybindings.conf ] && options="$options\n  Keybindings"
   [ -f ~/.dotfiles/hypr/input.conf ] && options="$options\n  Input"
-  options="$options\n  Defaults\n  Security\n  Config"
+  options="$options\n  Config"
 
   local selection
   selection=$(menu "Setup" "$options")
@@ -172,8 +172,8 @@ show_setup_menu() {
   *Monitors*) open_in_editor ~/.dotfiles/hypr/monitors.conf ;;
   *Keybindings*) open_in_editor ~/.dotfiles/hypr/keybindings.conf ;;
   *Input*) open_in_editor ~/.dotfiles/hypr/input.conf ;;
-  *Defaults*) open_in_editor ~/.dotfiles/uwsm/default ;;
-  *Security*) show_setup_security_menu ;;
+  # *Defaults*) open_in_editor ~/.dotfiles/uwsm/default ;;
+  # *Security*) show_setup_security_menu ;;
   *Config*) show_setup_config_menu ;;
   *) show_main_menu ;;
   esac
@@ -181,7 +181,7 @@ show_setup_menu() {
 
 show_setup_power_menu() {
   local profile
-  profile=$(menu "Power Profile" "$(powerprofiles-list)" "" "$(powerprofilesctl get)")
+  profile=$(menu "Power Profile" "$(display-powerprofiles)" "" "$(powerprofilesctl get)")
 
   if [[ "$profile" == "CNCLD" || -z "$profile" ]]; then
     back_to show_setup_menu
@@ -192,13 +192,12 @@ show_setup_power_menu() {
 
 show_setup_config_menu() {
   local selection
-  selection=$(menu "Setup" "  Hyprland\n  Hypridle\n  Hyprlock\n  Hyprsunset\n󱣴  Plymouth\n  Swayosd\n󰌧  Walker\n󰍜  Waybar")
+  selection=$(menu "Setup" "  Hyprland\n  Hypridle\n  Hyprlock\n  Hyprsunset\n  Swayosd\n󰌧  Walker\n󰍜  Waybar")
   case "$selection" in
   *Hyprland*) open_in_editor ~/.dotfiles/hypr/hyprland.conf ;;
   *Hypridle*) open_in_editor ~/.dotfiles/hypr/hypridle.conf && restart-hypridle ;;
   *Hyprlock*) open_in_editor ~/.dotfiles/hypr/hyprlock.conf ;;
   *Hyprsunset*) open_in_editor ~/.dotfiles/hypr/hyprsunset.conf && restart-hyprsunset ;;
-  *Plymouth*) open_in_editor ~/.dotfiles/plymouth/config.toml && restart-plymouth ;;
   *Swayosd*) open_in_editor ~/.dotfiles/swayosd/config.toml && restart-swayosd ;;
   *Walker*) open_in_editor ~/.dotfiles/walker/config.toml && restart-walker ;;
   *Waybar*) open_in_editor ~/.dotfiles/waybar/config.jsonc && restart-waybar ;;
@@ -206,23 +205,55 @@ show_setup_config_menu() {
   esac
 }
 
-show_setup_security_menu() {
+show_vms_menu() {
+
   local selection
-  selection=$(menu "Setup" "󰈷  Fingerprint\n  Fido2")
+
+  selection=$(menu "Virtual Machines" "  Create New VM...\n  Manage Existing VMs")
+
+  
+
   case "$selection" in
-  *Fingerprint*) tui setup-fingerprint ;;
-  *Fido2*) tui setup-fido2 ;;
-  *) show_setup_menu ;;
+
+    *"Create New VM"*)
+
+      tui install-vm
+
+      ;;
+
+    *"Manage Existing VMs"*)
+
+      tui manage-vms
+
+      ;;
+
+    *)
+
+      show_main_menu
+
+      ;;
+
   esac
+
 }
+
+# show_setup_security_menu() {
+#   local selection
+#   selection=$(menu "Setup" "󰈷  Fingerprint\n  Fido2")
+#   case "$selection" in
+#   *Fingerprint*) tui setup-fingerprint ;;
+#   *Fido2*) tui setup-fido2 ;;
+#   *) show_setup_menu ;;
+#   esac
+# }
 
 show_install_menu() {
   local selection
-  selection=$(menu "Install" "󰣇  Package\n  Web App\n  TUI\n󱚤  AI\n󰍲  Windows")
+  selection=$(menu "Install" "󰣇  Package\n  Web App\n󱚤  AI")
   case "$selection" in
   *Package*) terminal pkg-install ;;
-  *Web*) tui webapp-install ;;
-  *TUI*) tui tui-install ;;
+  *Web*) tui install-webapp ;;
+  #*TUI*) tui tui-install ;;
   *AI*) show_install_ai_menu ;;
   *Windows*) tui "windows-vm install" ;;
   *) show_main_menu ;;
@@ -358,9 +389,9 @@ show_install_ai_menu() {
 
 show_remove_menu() {
   local selection
-  selection=$(menu "Remove" "  Web App\n󰍲  Windows")
+  selection=$(menu "Remove" "  Web App")
   case "$selection" in
-  *Web*) tui webapp-remove ;;
+  *Web*) tui uninstall-webapp ;;
   *Windows*) tui "windows-vm remove" ;;
   *) show_main_menu ;;
   esac
@@ -456,9 +487,59 @@ show_system_menu() {
   esac
 }
 
+show_create_vm_menu() {
+  local os_list
+  os_list=$(quickget --list-json | jq -r '.[]."OS"' | sort -u)
+  
+  local selection
+  selection=$(menu "Create VM" "$os_list")
+  
+  if [ -n "$selection" ]; then
+    show_release_menu "$selection"
+  else
+    show_main_menu
+  fi
+}
+
+show_release_menu() {
+  local os="$1"
+  local release_list
+  release_list=$(quickget --list-json | jq -r --arg os "$os" '.[] | select(.OS == $os) | .Release' | sort -u)
+  
+  local selection
+  selection=$(menu "Select Release for $os" "$release_list")
+  
+  if [ -n "$selection" ]; then
+    show_edition_menu "$os" "$selection"
+  else
+    show_create_vm_menu
+  fi
+}
+
+show_edition_menu() {
+  local os="$1"
+  local release="$2"
+  local edition_list
+  edition_list=$(quickget --list-json | jq -r --arg os "$os" --arg release "$release" '.[] | select(.OS == $os and .Release == $release) | .Option' | sort -u)
+  
+  if [ -z "$edition_list" ]; then
+    tui quickget "$os" "$release"
+    return
+  fi
+  
+  local selection
+  selection=$(menu "Select Edition for $os $release" "$edition_list")
+  
+  if [ -n "$selection" ]; then
+    tui quickget "$os" "$release" "$selection"
+  else
+    show_release_menu "$os"
+  fi
+}
+
 show_main_menu() {
   local selection
-  selection=$(menu "Go" "󰀻  Apps\n󰧑  Learn\n󱓞  Trigger\n  Style\n  Setup\n󰉉  Install\n󰭌  Remove\n  About\n  System")
+  selection=$(menu "Go" "󰀻  Apps\n󰧑  Learn\n󱓞  Trigger\n  Style\n  Setup\n󰉉  Install\n󰭌  Remove\n  Virtual Machines\n  About\n  System")
   
   typeset -l lower_selection
   lower_selection="$selection"
@@ -478,7 +559,8 @@ show_main_menu() {
   *power*) show_setup_power_menu ;;
   *install*) show_install_menu ;;
   *remove*) show_remove_menu ;;
-  *about*) launch-about ;;
+  *"virtual machines"*) show_vms_menu ;;
+  *about*) display-about ;;
   *system*) show_system_menu ;;
   esac
 }

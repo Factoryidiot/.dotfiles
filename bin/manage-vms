@@ -1,0 +1,83 @@
+#!/usr/bin/env zsh
+
+# --- Configuration ---
+PERSISTENT_HOME="/persistent/home/rhys"
+VM_DIR="$PERSISTENT_HOME/VMs"
+# ---
+
+# --- Helper Functions ---
+# Needed for the stop command
+tui() {
+  launch-or-focus-tui "$@"
+}
+
+open_in_editor() {
+  notify-send "Editing config file" "$1"
+  launch-editor "$1"
+}
+
+# --- Main Logic ---
+
+# 1. Get all VMs and their statuses
+all_vms_array=($(find "$VM_DIR" -maxdepth 1 -name "*.conf" -type f -exec basename {} .conf \; | sort -u))
+running_vms_array=($(ps -ef | grep "[q]emu-system" | sed -n 's/.*-name \([^,]*\),process=.*/\1/p' | sort -u))
+
+if [ ${#all_vms_array[@]} -eq 0 ]; then
+  gum style --padding "1" "No VMs found in $VM_DIR."
+  read -k 1 '?Press any key to continue...'
+  exit 0
+fi
+
+all_vms=$(printf "%s\n" "${all_vms_array[@]}")
+
+# 2. Prepare data for gum table
+# The header for the table
+table_header="VM,Status"
+
+# Generate the rows for the table
+table_rows=""
+for vm in "${all_vms_array[@]}"; do
+  vm_status="󰄤 Stopped"
+  for running_vm in "${running_vms_array[@]}"; do
+    if [[ "$vm" == "$running_vm" ]]; then
+      vm_status="  Running"
+      break
+    fi
+  done
+  table_rows+="$vm,$vm_status\n"
+done
+
+# 3. Display the table and prompt for selection
+selected_vm=$(echo -e "$table_header\n$table_rows" | gum table --separator="," --widths=40,10 -r 1)
+
+if [ -z "$selected_vm" ]; then
+  exit 0
+fi
+
+# 4. Show actions for the selected VM
+VM_CONF="$VM_DIR/$selected_vm.conf"
+action=$(gum choose "  Start" "  Stop" "  Edit Config" "  Delete")
+
+case "$action" in
+  *Start*)
+    (cd "$VM_DIR" && setsid quickemu --vm "$selected_vm.conf")
+    gum style --padding "1" "VM '$selected_vm' is starting in a new session."
+    sleep 2
+    ;;
+  *Stop*) 
+    quickvm stop "$selected_vm"
+    ;; 
+  *"Edit Config"*) 
+    open_in_editor "$VM_CONF"
+    ;; 
+  *Delete*) 
+    if gum confirm "Permanently delete VM '$selected_vm'?"; then
+      if tui quickemu --vm "$VM_CONF" --delete-vm; then
+        gum style --padding "1" "VM '$selected_vm' deleted."
+      else
+        gum style --padding "1" "Failed to delete VM '$selected_vm'."
+      fi
+      read -k 1 '?Press any key to continue...'
+    fi
+    ;; 
+esac

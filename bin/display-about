@@ -1,5 +1,5 @@
 #!/usr/bin/env zsh
 
-APP_CLASS="dot.nix.about"
+APP_CLASS="dot.nix.display-about"
 
 exec setsid uwsm-app -- alacritty --class "$APP_CLASS" -e sh -c "fastfetch; read -n 1 -s"

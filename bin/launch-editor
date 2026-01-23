@@ -9,7 +9,8 @@ fi
 
 case "$EDITOR" in
 nvim | vim)
-  exec launch-tui "$EDITOR" "$@"
+  #exec launch-tui "$EDITOR" "$@"
+  exec launch-or-focus-tui "$EDITOR" "$@"
   ;;
 *)
   exec setsid uwsm-app -- "$EDITOR" "$@"

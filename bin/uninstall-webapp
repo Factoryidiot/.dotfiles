@@ -1,0 +1,74 @@
+#!/usr/bin/env zsh
+
+set -e
+
+# Correct paths based on install-webapp script
+ICON_DIR="$HOME/.local/share/web-apps/icons"
+DESKTOP_DIR="$HOME/.local/share/applications"
+
+# Array to hold app names
+WEB_APPS=()
+
+if [ "$#" -eq 0 ]; then
+  # Find all web apps by looking for the WebApp category
+  # This is more robust than checking the Exec line
+  while IFS= read -r -d '' file; do
+    if grep -q '^Categories=.*WebApp.*' "$file"; then
+      WEB_APPS+=("$(basename "${file%.desktop}")")
+    fi
+  done < <(find "$DESKTOP_DIR" -name '*.desktop' -print0)
+
+  if ((${#WEB_APPS[@]})); then
+    IFS=$'\n' SORTED_WEB_APPS=($(sort <<<"${WEB_APPS[*]}"))
+    unset IFS
+    
+    APP_NAMES_STRING=$(gum choose --no-limit --header "Select web app(s) to remove..." --selected-prefix="[✗] " "${SORTED_WEB_APPS[@]}")
+    
+    # Convert newline-separated string to array
+    APP_NAMES=()
+    while IFS= read -r line; do
+      [[ -n "$line" ]] && APP_NAMES+=("$line")
+    done <<< "$APP_NAMES_STRING"
+  else
+    echo "No web apps created by install-webapp found to remove."
+    exit 0 # Not an error, just nothing to do
+  fi
+else
+  # Use array to preserve spaces in app names if provided as arguments
+  APP_NAMES=("$@")
+fi
+
+if [[ ${#APP_NAMES[@]} -eq 0 ]]; then
+  echo "No web app selected to remove."
+  exit 0 # Not an error
+fi
+
+for APP_NAME in "${APP_NAMES[@]}"; do
+  DESKTOP_FILE_PATH="$DESKTOP_DIR/$APP_NAME.desktop"
+  ICON_FILE_PATH="$ICON_DIR/$APP_NAME.png"
+  
+  if [ -f "$DESKTOP_FILE_PATH" ]; then
+    rm -f "$DESKTOP_FILE_PATH"
+    echo "Removed desktop file: $DESKTOP_FILE_PATH"
+  else
+    echo "Desktop file for '$APP_NAME' not found."
+  fi
+  
+  # Note: This only removes icons that were downloaded by the install script.
+  # If you specified an existing system icon name or a path to your own icon,
+  # the original icon file will not be removed, which is the safer default.
+  if [ -f "$ICON_FILE_PATH" ]; then
+    rm -f "$ICON_FILE_PATH"
+    echo "Removed icon: $ICON_FILE_PATH"
+  else
+    echo "Icon for '$APP_NAME' not found at $ICON_FILE_PATH (this is expected if the app used a system icon)."
+  fi
+  
+  echo "--- Uninstalled '$APP_NAME' ---"
+done
+
+# Refresh the desktop database
+update-desktop-database -q "$DESKTOP_DIR" &> /dev/null || true
+
+echo -e "\nUninstallation complete."
+

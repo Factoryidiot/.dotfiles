@@ -1,0 +1,7 @@
+#!/usr/bin/env zsh
+
+if pgrep waybar >/dev/null; then
+  pkill waybar
+else
+  uwsm-app -- waybar >/dev/null 2>&1 &
+fi

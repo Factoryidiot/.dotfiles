@@ -3,16 +3,16 @@
 # Set to true when going directly to a submenu, so we can exit directly
 BACK_TO_EXIT=false
 
+# 0.06s allows the Wayland surface to unmap before the next one maps.
+transition_wait() {
+  sleep 0.06
+}
+
 back_to() {
   local parent_menu="$1"
-
-  if [[ "$BACK_TO_EXIT" == "true" ]]; then
-    exit 0
-  elif [[ -n "$parent_menu" ]]; then
-    "$parent_menu"
-  else
-    show_main_menu
-  fi
+  [[ "$BACK_TO_EXIT" == "true" ]] && exit 0
+  transition_wait
+  ${parent_menu:-show_main_menu}
 }
 
 menu() {
@@ -26,49 +26,43 @@ menu() {
   if [[ -n "$preselect" ]]; then
     local index
     index=$(echo -e "$options" | grep -nxF "$preselect" | cut -d: -f1)
-    if [[ -n "$index" ]]; then
-      args+=("-c" "$index")
-    fi
+    [[ -n "$index" ]] && args+=("-c" "$index")
   fi
 
-  echo -e "$options" | launch-menu-applications --dmenu --width 295 --minheight 1 --maxheight 630 -p "$prompt…" "${args[@]}"
+  # Check if walker service is active
+  if systemctl --user is-active --quiet walker.service; then
+    # Use the walker binary to communicate with the service
+    printf "%b" "$options" | walker --dmenu --width 295 -p "$prompt…" "${args[@]}"
+  else
+    # Fallback to the wrapper if the service is down
+    printf "%b" "$options" | launch-menu-applications --dmenu --width 295 -p "$prompt…" "${args[@]}"
+  fi
 }
 
-terminal() {
-  xdg-terminal-exec --app-id=dot.nix.terminal "$@"
-}
+#*----- Submenus ---------------------------------
 
-tui() {
-  launch-or-focus-tui "$@"
-}
-
-open_in_editor() {
-  notify-send "Editing config file" "$1"
-  launch-editor "$1"
-}
-
-show_learn_menu() {
+show_help_menu() {
   local selection
   selection=$(menu "Learn" "  Keybindings\n  Home-Manager\n  Hyprland\n  Neovim\n  Nixos\n󱆃  Zsh")
   case "$selection" in
-  *Keybindings*) launch-or-focus-tui display-keybindings ;;
-  *Home-Manager*) launch-webapp "https://home-manager-options.extranix.com/" ;;
-  *Hyprland*) launch-webapp "https://wiki.hypr.land/" ;;
-  *Neovim*) launch-webapp "https://www.lazyvim.org/keymaps" ;;
-  *Nixos*) launch-webapp "https://wiki.nixos.org/wiki/NixOS_Wiki" ;;
-  *Zsh*) launch-webapp "https://devhints.io/bash" ;;
-  *) show_main_menu ;;
+    *Keybindings*) launch-or-focus-tui display-keybindings ;;
+    *Home-Manager*) launch-webapp "https://home-manager-options.extranix.com/" ;;
+    *Hyprland*) launch-webapp "https://wiki.hypr.land/" ;;
+    *Neovim*) launch-webapp "https://www.lazyvim.org/keymaps" ;;
+    *Nixos*) launch-webapp "https://wiki.nixos.org/wiki/NixOS_Wiki" ;;
+    *Zsh*) launch-webapp "https://devhints.io/bash" ;;
+    *) back_to show_main_menu ;;
   esac
 }
 
-show_trigger_menu() {
+show_actions_menu() {
   local selection
-  selection=$(menu "Trigger" "  Capture\n  Share\n󰔎  Toggle")
+  selection=$(menu "Actions" "  Capture\n  Share\n󰔎  Toggle")
   case "$selection" in
-  *Capture*) show_capture_menu ;;
-  *Share*) show_share_menu ;;
-  *Toggle*) show_toggle_menu ;;
-  *) show_main_menu ;;
+    *Capture*) transition_wait; show_capture_menu ;;
+    *Share*) transition_wait; show_share_menu ;;
+    *Toggle*) transition_wait; show_toggle_menu ;;
+    *) back_to show_main_menu ;;
   esac
 }
 
@@ -76,9 +70,9 @@ show_capture_menu() {
   local selection
   selection=$(menu "Capture" "  Screenshot\n󰃉  Color")
   case "$selection" in
-  *Screenshot*) show_screenshot_menu ;;
-  *Color*) pkill hyprpicker || hyprpicker -a ;;
-  *) show_trigger_menu ;;
+    *Screenshot*) transition_wait; show_screenshot_menu ;;
+    *Color*) pkill hyprpicker || hyprpicker -a ;;
+    *) back_to show_actions_menu ;;
   esac
 }
 
@@ -86,33 +80,20 @@ show_screenshot_menu() {
   local selection
   selection=$(menu "Screenshot" "  Snap with Editing\n  Straight to Clipboard")
   case "$selection" in
-  *Editing*) cmd-screenshot smart ;;
-  *Clipboard*) cmd-screenshot smart clipboard ;;
-  *) show_capture_menu ;;
+    *Editing*) cmd-screenshot smart ;;
+    *Clipboard*) cmd-screenshot smart clipboard ;;
+    *) back_to show_capture_menu ;;
   esac
 }
 
-# show_screenrecord_menu() {
-#   cmd-screenrecord --stop-recording && exit 0
-# 
-#   local selection
-#   selection=$(menu "Screenrecord" "  With desktop audio\n  With desktop + microphone audio\n  With desktop + microphone audio + webcam")
-#   case "$selection" in
-#   *"With desktop audio"*) cmd-screenrecord --with-desktop-audio ;;
-#   *"With desktop + microphone audio"*) cmd-screenrecord --with-desktop-audio --with-microphone-audio ;;
-#   *"With desktop + microphone audio + webcam"*) cmd-screenrecord --with-desktop-audio --with-microphone-audio --with-webcam ;;
-#   *) back_to show_capture_menu ;;
-#   esac
-# }
-
 show_share_menu() {
   local selection
-  selection=$(menu "Share" "  Clipboard\n  File \n  Folder")
+  selection=$(menu "Share" "  Clipboard\n  File\n  Folder")
   case "$selection" in
-  *Clipboard*) cmd-share clipboard ;;
-  *File*) terminal bash -c "cmd-share file" ;;
-  *Folder*) terminal bash -c "cmd-share folder" ;;
-  *) back_to show_trigger_menu ;;
+    *Clipboard*) cmd-share clipboard ;;
+    *File*) xdg-terminal-exec --app-id=dot.nix.terminal bash -c "cmd-share file" ;;
+    *Folder*) xdg-terminal-exec --app-id=dot.nix.terminal bash -c "cmd-share folder" ;;
+    *) back_to show_actions_menu ;;
   esac
 }
 
@@ -120,448 +101,98 @@ show_toggle_menu() {
   local selection
   selection=$(menu "Toggle" "󱄄  Screensaver\n󰔎  Nightlight\n󱫖  Idle Lock\n󰍜  Top Bar")
   case "$selection" in
-  *Screensaver*) toggle-screensaver ;;
-  *Nightlight*) toggle-nightlight ;;
-  *Idle*) toggle-idle ;;
-  *Bar*) toggle-waybar ;;
-  *) show_trigger_menu ;;
+    *Screensaver*) toggle-screensaver ;;
+    *Nightlight*) toggle-nightlight ;;
+    *Idle*) toggle-idle ;;
+    *Bar*) toggle-waybar ;;
+    *) back_to show_actions_menu ;;
   esac
-}
-
-show_style_menu() {
-  local selection
-  selection=$(menu "Style" "󰸌  Theme\n  Font\n  Background\n  Hyprland\n󱄄  Screensaver")
-  case "$selection" in
-  *Theme*) show_theme_menu ;;
-  *Font*) show_font_menu ;;
-  *Background*) theme-bg-next ;;
-  *Hyprland*) open_in_editor ~/.dotfiles/hypr/looknfeel.conf ;;
-  *Screensaver*) open_in_editor ~/.dotfiles/screensaver.txt ;;
-  *) show_main_menu ;;
-  esac
-}
-
-show_theme_menu() {
-  launch-menu-applications -m menus:omarchythemes --width 800 --minheight 400
-}
-
-show_font_menu() {
-  local theme
-  theme=$(menu "Font" "$(font-list)" "--width 350" "$(font-current)")
-
-  if [[ "$theme" == "CNCLD" || -z "$theme" ]]; then
-    back_to show_style_menu
-  else
-    font-set "$theme"
-  fi
 }
 
 show_setup_menu() {
-  local options="  Audio\n  Wifi\n󰂯  Bluetooth\n󱐋  Power Profile\n󰍹  Monitors"
-  [ -f ~/.dotfiles/hypr/keybindings.conf ] && options="$options\n  Keybindings"
-  [ -f ~/.dotfiles/hypr/input.conf ] && options="$options\n  Input"
-  options="$options\n  Config"
-
+  local options="  Audio\n  Wifi\n󰂯  Bluetooth\n󱐋  Power Profile\n󰍹  Monitors\n  Keybindings"
   local selection
   selection=$(menu "Setup" "$options")
   case "$selection" in
-  *Audio*) launch-or-focus-tui wiremix ;;
-  *Wifi*) launch-wifi ;;
-  *Bluetooth*) launch-bluetooth ;;
-  *Power*) show_setup_power_menu ;;
-  *Monitors*) open_in_editor ~/.dotfiles/hypr/monitors.conf ;;
-  *Keybindings*) open_in_editor ~/.dotfiles/hypr/keybindings.conf ;;
-  *Input*) open_in_editor ~/.dotfiles/hypr/input.conf ;;
-  # *Defaults*) open_in_editor ~/.dotfiles/uwsm/default ;;
-  # *Security*) show_setup_security_menu ;;
-  *Config*) show_setup_config_menu ;;
-  *) show_main_menu ;;
+    *Audio*) launch-or-focus-tui wiremix ;;
+    *Wifi*) launch-wifi ;;
+    *Bluetooth*) launch-bluetooth ;;
+    *Power*) transition_wait; show_setup_power_menu ;;
+    *Monitors*) launch-editor ~/.dotfiles/hypr/monitors.conf ;;
+    *Keybindings*) launch-editor ~/.dotfiles/hypr/keybindings.conf ;;
+    *) back_to show_main_menu ;;
   esac
 }
 
 show_setup_power_menu() {
-  local profile
-  profile=$(menu "Power Profile" "$(display-powerprofiles)" "" "$(powerprofilesctl get)")
+  local current_raw
+  current_raw=$(asusctl profile get | grep "Active profile" | awk -F': ' '{print $2}')
 
-  if [[ "$profile" == "CNCLD" || -z "$profile" ]]; then
-    back_to show_setup_menu
-  else
-    powerprofilesctl set "$profile"
-  fi
-}
+  local preselect=""
+  case "${current_raw:l}" in
+    *performance*) preselect="  Performance" ;;
+    *balanced*)    preselect="  Balanced" ;;
+    *quiet*)       preselect="🌱 Power Saver" ;;
+  esac
 
-show_setup_config_menu() {
   local selection
-  selection=$(menu "Setup" "  Hyprland\n  Hypridle\n  Hyprlock\n  Hyprsunset\n  Swayosd\n󰌧  Walker\n󰍜  Waybar")
+  selection=$(menu "Power Profile" "  Performance\n  Balanced\n🌱 Power Saver" "" "$preselect")
+
   case "$selection" in
-  *Hyprland*) open_in_editor ~/.dotfiles/hypr/hyprland.conf ;;
-  *Hypridle*) open_in_editor ~/.dotfiles/hypr/hypridle.conf && restart-hypridle ;;
-  *Hyprlock*) open_in_editor ~/.dotfiles/hypr/hyprlock.conf ;;
-  *Hyprsunset*) open_in_editor ~/.dotfiles/hypr/hyprsunset.conf && restart-hyprsunset ;;
-  *Swayosd*) open_in_editor ~/.dotfiles/swayosd/config.toml && restart-swayosd ;;
-  *Walker*) open_in_editor ~/.dotfiles/walker/config.toml && restart-walker ;;
-  *Waybar*) open_in_editor ~/.dotfiles/waybar/config.jsonc && restart-waybar ;;
-  *) show_main_menu ;;
+    *Performance*) asusctl profile set performance ;;
+    *Balanced*)    asusctl profile set balanced ;;
+    *Saver*)       asusctl profile set quiet ;;
+    *)             back_to show_setup_menu ;;
   esac
 }
 
 show_vms_menu() {
-
   local selection
-
-  selection=$(menu "Virtual Machines" "  Create New VM...\n  Manage Existing VMs")
-
-  
-
+  selection=$(menu "Virtual Machines" "  Create New VM...\n  Manage VMs")
   case "$selection" in
-
-    *"Create New VM"*)
-
-      tui install-vm
-
-      ;;
-
-    *"Manage Existing VMs"*)
-
-      tui manage-vms
-
-      ;;
-
-    *)
-
-      show_main_menu
-
-      ;;
-
+    *"Create New VM"*) alacritty --class dot.nix.install-vm -e install-vm ;;
+    *"Manage VMs"*) alacritty --class dot.nix.manage-vms -e manage-vms ;;
+    *) back_to show_main_menu ;;
   esac
-
 }
-
-# show_setup_security_menu() {
-#   local selection
-#   selection=$(menu "Setup" "󰈷  Fingerprint\n  Fido2")
-#   case "$selection" in
-#   *Fingerprint*) tui setup-fingerprint ;;
-#   *Fido2*) tui setup-fido2 ;;
-#   *) show_setup_menu ;;
-#   esac
-# }
 
 show_install_menu() {
   local selection
-  selection=$(menu "Install" "󰣇  Package\n  Web App\n󱚤  AI")
+  selection=$(menu "Install" "󰣇  Package\n  Web App")
   case "$selection" in
-  *Package*) terminal pkg-install ;;
-  *Web*) tui install-webapp ;;
-  #*TUI*) tui tui-install ;;
-  *AI*) show_install_ai_menu ;;
-  *Windows*) tui "windows-vm install" ;;
-  *) show_main_menu ;;
+    *Package*) xdg-terminal-exec pkg-install ;;
+    *Web*) tui install-webapp ;;
+    *) back_to show_main_menu ;;
   esac
 }
-
-# show_install_service_menu() {
-#   local selection
-#   selection=$(menu "Install" "  Dropbox\n  Tailscale\n󰟵  Bitwarden\n  Chromium Account")
-#   case "$selection" in
-#   *Dropbox*) tui install-dropbox ;;
-#   *Tailscale*) tui install-tailscale ;;
-#   *Bitwarden*) install_and_launch "Bitwarden" "bitwarden bitwarden-cli" "bitwarden" ;;
-#   *Chromium*) tui install-chromium-google-account ;;
-#   *) show_install_menu ;;
-#   esac
-# }
-
-# show_install_editor_menu() {
-#   local selection
-#   selection=$(menu "Install" "  VSCode\n  Cursor\n  Zed\n  Sublime Text\n  Helix\n  Emacs")
-#   case "$selection" in
-#   *VSCode*) tui install-vscode ;;
-#   *Cursor*) install_and_launch "Cursor" "cursor-bin" "cursor" ;;
-#   *Zed*) tui "echo 'Installing Zed...'; sudo pacman -S zed && setsid gtk-launch dev.zed.Zed" ;;
-#   *Sublime*) install_and_launch "Sublime Text" "sublime-text-4" "sublime_text" ;;
-#   *Helix*) install "Helix" "helix" ;;
-#   *Emacs*) install "Emacs" "emacs-wayland" && systemctl --user enable --now emacs.service ;;
-#   *) show_install_menu ;;
-#   esac
-# }
-
-# show_install_terminal_menu() {
-#   local selection
-#   selection=$(menu "Install" "  Alacritty\n  Ghostty\n  Kitty")
-#   case "$selection" in
-#   *Alacritty*) install_terminal "alacritty" ;;
-#   *Ghostty*) install_terminal "ghostty" ;;
-#   *Kitty*) install_terminal "kitty" ;;
-#   *) show_install_menu ;;
-#   esac
-# }
-
-show_install_ai_menu() {
-  ollama_pkg=(
-    $(command -v nvidia-smi &>/dev/null && echo ollama-cuda)
-    $(command -v rocminfo &>/dev/null && echo ollama-rocm)
-    ollama
-  )
-
-  local selection
-  selection=$(menu "Install" "󱚤  Claude Code\n󱚤  Cursor CLI\n󱚤  Gemini\n󱚤  OpenAI Codex\n󱚤  LM Studio\n󱚤  Ollama\n󱚤  Crush\n󱚤  opencode")
-  case "$selection" in
-  *Claude*) install "Claude Code" "claude-code" ;;
-  *Cursor*) install "Cursor CLI" "cursor-cli" ;;
-  *OpenAI*) install "OpenAI Codex" "openai-codex-bin" ;;
-  *Gemini*) install "Gemini" "gemini-cli" ;;
-  *Studio*) install "LM Studio" "lmstudio" ;;
-  *Ollama*) install "Ollama" "${ollama_pkg[@]}" ;;
-  *Crush*) install "Crush" "crush-bin" ;;
-  *opencode*) install "opencode" "opencode" ;;
-  *) show_install_menu ;;
-  esac
-}
-
-# show_install_gaming_menu() {
-#   local selection
-#   selection=$(menu "Install" "  Steam\n  RetroArch [AUR]\n󰍳  Minecraft\n󰖺  Xbox Controller [AUR]")
-#   case "$selection" in
-#   *Steam*) tui install-steam ;;
-#   *RetroArch*) aur_install_and_launch "RetroArch" "retroarch retroarch-assets libretro libretro-fbneo" "com.libretro.RetroArch.desktop" ;;
-#   *Minecraft*) install_and_launch "Minecraft" "minecraft-launcher" "minecraft-launcher" ;;
-#   *Xbox*) tui install-xbox-controllers ;;
-#   *) show_install_menu ;;
-#   esac
-# }
-
-# show_install_style_menu() {
-#   local selection
-#   selection=$(menu "Install" "󰸌  Theme\n  Background\n  Font")
-#   case "$selection" in
-#   *Theme*) tui theme-install ;;
-#   *Background*) nautilus ~/.config/omarchy/current/theme/backgrounds ;;
-#   *Font*) show_install_font_menu ;;
-#   *) show_install_menu ;;
-#   esac
-# }
-
-# show_install_font_menu() {
-#   local selection
-#   selection=$(menu "Install" "  Meslo LG Mono\n  Fira Code\n  Victor Code\n  Bistream Vera Mono\n  Iosevka" "--width 350")
-#   case "$selection" in
-#   *Meslo*) install_font "Meslo LG Mono" "ttf-meslo-nerd" "MesloLGL Nerd Font" ;;
-#   *Fira*) install_font "Fira Code" "ttf-firacode-nerd" "FiraCode Nerd Font" ;;
-#   *Victor*) install_font "Victor Code" "ttf-victor-mono-nerd" "VictorMono Nerd Font" ;;
-#   *Bistream*) install_font "Bistream Vera Code" "ttf-bitstream-vera-mono-nerd" "BitstromWera Nerd Font" ;;
-#   *Iosevka*) install_font "Iosevka" "ttf-iosevka-nerd" "Iosevka Nerd Font Mono" ;;
-#   *) show_install_menu ;;
-#   esac
-# }
-
-# show_install_development_menu() {
-#   local selection
-#   selection=$(menu "Install" "󰫏  Ruby on Rails\n  Docker DB\n  JavaScript\n  Go\n  PHP\n  Python\n  Elixir\n  Zig\n  Rust\n  Java\n  .NET\n  OCaml\n  Clojure")
-#   case "$selection" in
-#   *Rails*) tui "install-dev-env ruby" ;;
-#   *Docker*) tui install-docker-dbs ;;
-#   *JavaScript*) show_install_javascript_menu ;;
-#   *Go*) tui "install-dev-env go" ;;
-#   *PHP*) show_install_php_menu ;;
-#   *Python*) tui "install-dev-env python" ;;
-#   *Elixir*) show_install_elixir_menu ;;
-#   *Zig*) tui "install-dev-env zig" ;;
-#   *Rust*) tui "install-dev-env rust" ;;
-#   *Java*) tui "install-dev-env java" ;;
-#   *NET*) tui "install-dev-env dotnet" ;;
-#   *OCaml*) tui "install-dev-env ocaml" ;;
-#   *Clojure*) tui "install-dev-env clojure" ;;
-#   *) show_install_menu ;;
-#   esac
-# }
-
-# show_install_javascript_menu() {
-#   local selection
-#   selection=$(menu "Install" "  Node.js\n  Bun\n  Deno")
-#   case "$selection" in
-#   *Node*) tui "install-dev-env node" ;;
-#   *Bun*) tui "install-dev-env bun" ;;
-#   *Deno*) tui "install-dev-env deno" ;;
-#   *) show_install_development_menu ;;
-#   esac
-# }
-
-show_remove_menu() {
-  local selection
-  selection=$(menu "Remove" "  Web App")
-  case "$selection" in
-  *Web*) tui uninstall-webapp ;;
-  *Windows*) tui "windows-vm remove" ;;
-  *) show_main_menu ;;
-  esac
-}
-
-# show_update_menu() {
-#   local selection
-#   selection=$(menu "Update" " Omarchy\n󰔫  Channel\n  Config\n󰸌  Extra Themes\n  Process\n󰇅  Hardware\n  Firmware\n  Password\n  Timezone\n  Time")
-#   case "$selection" in
-#   *Omarchy*) tui update ;;
-#   *Channel*) show_update_channel_menu ;;
-#   *Config*) show_update_config_menu ;;
-#   *Themes*) tui theme-update ;;
-#   *Process*) show_update_process_menu ;;
-#   *Hardware*) show_update_hardware_menu ;;
-#   *Firmware*) tui update-firmware ;;
-#   *Timezone*) tui tz-select ;;
-#   *Time*) tui update-time ;;
-#   *Password*) show_update_password_menu ;;
-#   *) show_main_menu ;;
-#   esac
-# }
-# 
-# show_update_channel_menu() {
-#   local selection
-#   selection=$(menu "Update channel" "🟢 Stable\n🟡 Edge\n🔴 Dev")
-#   case "$selection" in
-#   *Stable*) tui "channel-set stable" ;;
-#   *Edge*) tui "channel-set edge" ;;
-#   *Dev*) tui "channel-set dev" ;;
-#   *) show_update_menu ;;
-#   esac
-# }
-# show_update_process_menu() {
-#   local selection
-#   selection=$(menu "Restart" "  Hypridle\n  Hyprsunset\n  Swayosd\n󰌧  Walker\n󰍜  Waybar")
-#   case "$selection" in
-#   *Hypridle*) restart-hypridle ;;
-#   *Hyprsunset*) restart-hyprsunset ;;
-#   *Swayosd*) restart-swayosd ;;
-#   *Walker*) restart-walker ;;
-#   *Waybar*) restart-waybar ;;
-#   *) show_update_menu ;;
-#   esac
-# }
-# 
-# show_update_config_menu() {
-#   local selection
-#   selection=$(menu "Use default config" "  Hyprland\n  Hypridle\n  Hyprlock\n  Hyprsunset\n󱣴  Plymouth\n  Swayosd\n󰌧  Walker\n󰍜  Waybar")
-#   case "$selection" in
-#   *Hyprland*) tui refresh-hyprland ;;
-#   *Hypridle*) tui refresh-hypridle ;;
-#   *Hyprlock*) tui refresh-hyprlock ;;
-#   *Hyprsunset*) tui refresh-hyprsunset ;;
-#   *Plymouth*) tui refresh-plymouth ;;
-#   *Swayosd*) tui refresh-swayosd ;;
-#   *Walker*) tui refresh-walker ;;
-#   *Waybar*) tui refresh-waybar ;;
-#   *) show_update_menu ;;
-#   esac
-# }
-# 
-# show_update_hardware_menu() {
-#   local selection
-#   selection=$(menu "Restart" "  Audio\n󱚾  Wi-Fi\n󰂯  Bluetooth")
-#   case "$selection" in
-#   *Audio*) tui restart-pipewire ;;
-#   *Wi-Fi*) tui restart-wifi ;;
-#   *Bluetooth*) tui restart-bluetooth ;;
-#   *) show_update_menu ;;
-#   esac
-# }
-# 
-# show_update_password_menu() {
-#   local selection
-#   selection=$(menu "Update Password" "  Drive Encryption\n  User")
-#   case "$selection" in
-#   *Drive*) tui drive-set-password ;;
-#   *User*) tui passwd ;;
-#   *) show_update_menu ;;
-#   esac
-# }
 
 show_system_menu() {
   local selection
   selection=$(menu "System" "  Lock\n󱄄  Screensaver\n󰜉  Restart\n󰐥  Shutdown")
   case "$selection" in
-  *Lock*) lock-screen ;;
-  *Screensaver*) launch-screensaver force ;;
-  *Restart*) cmd-reboot ;;
-  *Shutdown*) cmd-shutdown ;;
-  *) back_to show_main_menu ;;
+    *Lock*) lock-screen ;;
+    *Screensaver*) launch-screensaver force ;;
+    *Restart*) cmd-reboot ;;
+    *Shutdown*) cmd-shutdown ;;
+    *) back_to show_main_menu ;;
   esac
 }
 
-show_create_vm_menu() {
-  local os_list
-  os_list=$(quickget --list-json | jq -r '.[]."OS"' | sort -u)
-  
-  local selection
-  selection=$(menu "Create VM" "$os_list")
-  
-  if [ -n "$selection" ]; then
-    show_release_menu "$selection"
-  else
-    show_main_menu
-  fi
-}
-
-show_release_menu() {
-  local os="$1"
-  local release_list
-  release_list=$(quickget --list-json | jq -r --arg os "$os" '.[] | select(.OS == $os) | .Release' | sort -u)
-  
-  local selection
-  selection=$(menu "Select Release for $os" "$release_list")
-  
-  if [ -n "$selection" ]; then
-    show_edition_menu "$os" "$selection"
-  else
-    show_create_vm_menu
-  fi
-}
-
-show_edition_menu() {
-  local os="$1"
-  local release="$2"
-  local edition_list
-  edition_list=$(quickget --list-json | jq -r --arg os "$os" --arg release "$release" '.[] | select(.OS == $os and .Release == $release) | .Option' | sort -u)
-  
-  if [ -z "$edition_list" ]; then
-    tui quickget "$os" "$release"
-    return
-  fi
-  
-  local selection
-  selection=$(menu "Select Edition for $os $release" "$edition_list")
-  
-  if [ -n "$selection" ]; then
-    tui quickget "$os" "$release" "$selection"
-  else
-    show_release_menu "$os"
-  fi
-}
+# --- Main Entry ---
 
 show_main_menu() {
   local selection
-  selection=$(menu "Go" "󰀻  Apps\n󰧑  Learn\n󱓞  Trigger\n  Style\n  Setup\n󰉉  Install\n󰭌  Remove\n  Virtual Machines\n  About\n  System")
-  
-  typeset -l lower_selection
-  lower_selection="$selection"
+  selection=$(menu "Go" "󰀻  Apps\n󱓞  Actions\n  Setup\n󰉉  Install\n  Virtual Machines\n󰧑  Help\n  System")
 
-  case "$lower_selection" in
-  *apps*) 
-    launch-menu-applications -p "Launch…"
-    ;; 
-  *learn*) show_learn_menu ;;
-  *trigger*) show_trigger_menu ;;
-  *share*) show_share_menu ;;
-  *style*) show_style_menu ;;
-  *theme*) show_theme_menu ;;
-  *screenshot*) show_screenshot_menu ;;
-  *screenrecord*) show_screenrecord_menu ;;
-  *setup*) show_setup_menu ;;
-  *power*) show_setup_power_menu ;;
-  *install*) show_install_menu ;;
-  *remove*) show_remove_menu ;;
-  *"virtual machines"*) show_vms_menu ;;
-  *about*) display-about ;;
-  *system*) show_system_menu ;;
+  case "${selection:l}" in
+    *apps*) transition_wait; launch-menu-applications -p "Launch…" ;;
+    *actions*) transition_wait; show_actions_menu ;;
+    *setup*) transition_wait; show_setup_menu ;;
+    *install*) transition_wait; show_install_menu ;;
+    *"virtual machines"*) transition_wait; show_vms_menu ;;
+    *help*) transition_wait; show_help_menu ;;
+    *system*) transition_wait; show_system_menu ;;
+    *) exit 0 ;;
   esac
 }
 

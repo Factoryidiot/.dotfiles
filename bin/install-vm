@@ -1,47 +1,73 @@
 #!/usr/bin/env zsh
 
 # --- Configuration ---
-PERSISTENT_HOME="/persistent/home/rhys"
+PERSISTENT_HOME="/persistent/home/$USER"
+ISO_DIR="$PERSISTENT_HOME/Downloads/ISO"
 VM_DIR="$PERSISTENT_HOME/VMs"
-# ---
+BIOS_DIR="$HOME/Downloads/BIOS" 
 
-# --- JQ Scripts ---
-JQ_RELEASE_SCRIPT='.[] | select(.OS == $os) | .Release'
-JQ_EDITION_SCRIPT='.[] | select(.OS == $os and .Release == $release) | .Option'
-
-# Get the list of operating systems from quickget
-os_list=$(gum spin --title "Fetching operating systems..." -- zsh -c "quickget --list-json | jq -r '.[].OS' | sort -u")
-
-# Create a table of operating systems
-selected_os=$(echo -e "Operating System\n$os_list" | gum table)
-
-# If the user selected an OS, prompt for the release
-if [ -n "$selected_os" ]; then
-  release_list=$(gum spin --title "Fetching releases for $selected_os..." -- zsh -c "quickget --list-json | jq -r --arg os \"$selected_os\" '$JQ_RELEASE_SCRIPT' | sort -u")
-  selected_release=$(echo -e "Release\n$release_list" | gum table)
-
-  # If the user selected a release, prompt for the edition
-  if [ -n "$selected_release" ]; then
-    edition_list=$(gum spin --title "Fetching editions for $selected_os $selected_release..." -- zsh -c "quickget --list-json | jq -r --arg os \"$selected_os\" --arg release \"$selected_release\" '$JQ_EDITION_SCRIPT' | sort -u")
-
-    # Ensure the VM directory exists
-    mkdir -p "$VM_DIR"
-    # Change to the VM directory before running quickget
-    pushd "$VM_DIR" > /dev/null
-
-    # If there are no editions, just run quickget
-    if [ -z "$edition_list" ]; then
-      quickget "$selected_os" "$selected_release"
-    else
-      selected_edition=$(echo -e "Edition\n$edition_list" | gum table)
-      if [ -n "$selected_edition" ]; then
-        quickget "$selected_os" "$selected_release" "$selected_edition"
-      fi
-    fi
-    # Change back to the original directory
-    popd > /dev/null
-  fi
+# --- Check for ISOs ---
+if [ ! -d "$ISO_DIR" ] || [ -z "$(ls -A "$ISO_DIR" 2>/dev/null)" ]; then
+    gum style --padding "1 2" --border double --border-foreground 212 "No ISOs found in $ISO_DIR."
+    exit 1
 fi
 
-echo
-read "REPLY?Press Enter to close window..."
+# --- Select ISO ---
+iso_list=$(ls -1 "$ISO_DIR")
+selected_iso=$(echo "$iso_list" | gum choose)
+
+if [ -z "$selected_iso" ]; then exit 0; fi
+
+# --- System Probe ---
+TOTAL_CORES=$(nproc)
+SUGGESTED_CORES=$((TOTAL_CORES / 2))
+[ "$SUGGESTED_CORES" -eq 0 ] && SUGGESTED_CORES=1
+
+TOTAL_MEM_MB=$(free -m | awk '/^Mem:/ {print $2}')
+SUGGESTED_MEM_MB=$((TOTAL_MEM_MB / 2))
+
+# --- Get VM Details ---
+echo "Enter VM Details" | gum format
+vm_profile=$(gum choose "Generic Linux" "AthenaOS")
+[ -z "$vm_profile" ] && exit 0
+
+vm_name=$(gum input --placeholder "VM Name (e.g., ubuntu-server)")
+[ -z "$vm_name" ] && exit 0
+
+VM_PATH="$VM_DIR/$vm_name"
+
+if [ -d "$VM_PATH" ]; then
+    gum style --padding "1 2" --border double --border-foreground 196 "Error: '$vm_name' already exists."
+    exit 1
+fi
+
+vm_mem=$(gum input --placeholder "Memory in MB" --value "$SUGGESTED_MEM_MB")
+vm_cpus=$(gum input --placeholder "vCPU Cores" --value "$SUGGESTED_CORES")
+vm_disk_size=$(gum input --placeholder "Disk Size in GB (e.g., 30)")
+
+# --- Create VM Structure ---
+mkdir -p "$VM_PATH/tpm" || exit 1
+
+VM_CONFIG_FILE="$VM_PATH/vm.conf"
+VM_DISK_PATH="$VM_PATH/disk.qcow2"
+ISO_PATH="$ISO_DIR/$selected_iso"
+
+# --- Write VM Configuration ---
+cat <<EOF > "$VM_CONFIG_FILE"
+VM_PROFILE="$vm_profile"
+VM_NAME="$vm_name"
+VM_MEM="$vm_mem"
+VM_CPUS="$vm_cpus"
+VM_DISK_SIZE="$vm_disk_size"
+SELECTED_ISO="$selected_iso"
+ISO_PATH="$ISO_PATH"
+VM_DISK_PATH="$VM_DISK_PATH"
+EOF
+
+# --- Create Disk Image ---
+gum spin --spinner dot --title "Creating ${vm_disk_size}G disk image..." -- \
+    qemu-img create -f qcow2 "$VM_DISK_PATH" -o nocow=on "${vm_disk_size}G"
+
+gum style --padding "1 2" --border double --border-foreground 212 "VM '$vm_name' configured successfully."
+
+sleep 3

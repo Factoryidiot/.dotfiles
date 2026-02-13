@@ -1,0 +1,32 @@
+#!/usr/bin/env zsh
+
+# System command that handles reboot or shutdown, first closing all application windows
+# to allow applications a chance to save state.
+
+COMMAND="$1"
+
+if [[ -z "$COMMAND" ]]; then
+  echo "Usage: cmd-system <reboot|shutdown>"
+  exit 1
+fi
+
+# Clear state before proceeding
+state clear re*-required
+
+# Close all application windows
+hyprland-window-close-all
+sleep 1 # Allow apps like Chrome to shutdown correctly
+
+# Schedule the action to happen after closing windows (detached from terminal)
+case "$COMMAND" in
+  reboot)
+    nohup bash -c "sleep 2 && systemctl reboot --no-wall" >/dev/null 2>&1 &
+    ;;
+  shutdown)
+    nohup bash -c "sleep 2 && systemctl poweroff --no-wall" >/dev/null 2>&1 &
+    ;;
+  *)
+    echo "Invalid command: $COMMAND. Use 'reboot' or 'shutdown'."
+    exit 1
+    ;;
+esac

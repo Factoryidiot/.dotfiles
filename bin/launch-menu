@@ -172,8 +172,8 @@ show_system_menu() {
   case "$selection" in
     *Lock*) lock-screen ;;
     *Screensaver*) launch-screensaver force ;;
-    *Restart*) cmd-reboot ;;
-    *Shutdown*) cmd-shutdown ;;
+    *Restart*) cmd-system reboot ;;
+    *Shutdown*) cmd-system shutdown ;;
     *) back_to show_main_menu ;;
   esac
 }

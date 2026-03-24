@@ -8,10 +8,10 @@ firefox* )
     # Launch Firefox directly with the dedicated WebApp profile
     exec setsid uwsm-app -- firefox --no-remote -P "WebApps" --new-window --class WebApp "$1" "${@:2}"
     ;;
-*brave* )
+*chromium* )
     # For Brave, launch in app mode with a specific class
     # The executable is 'brave', not the desktop file name.
-    exec setsid uwsm-app -- brave --app="$1" --new-window --class=WebApp "${@:2}"
+    exec setsid uwsm-app -- chromium --app="$1" --new-window --class=WebApp "${@:2}"
     ;;
 *)
     # For other browsers, extract the executable name from the .desktop file

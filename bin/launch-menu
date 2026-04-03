@@ -147,13 +147,8 @@ show_setup_power_menu() {
 }
 
 show_vms_menu() {
-  local selection
-  selection=$(menu "Virtual Machines" "  Create New VM...\n  Manage VMs")
-  case "$selection" in
-    *"Create New VM"*) alacritty --class dot.nix.install-vm -e install-vm ;;
-    *"Manage VMs"*) alacritty --class dot.nix.manage-vms -e manage-vms ;;
-    *) back_to show_main_menu ;;
-  esac
+  transition_wait
+  alacritty --class dot.nix.manage-vms -e manage-vm
 }
 
 show_install_menu() {

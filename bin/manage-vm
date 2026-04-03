@@ -1,0 +1,178 @@
+#!/usr/bin/env zsh
+
+# --- Configuration ---
+VM_DIR="$HOME/VMs"
+ISO_DIR="$HOME/Downloads/ISO"
+BIOS_DIR="$HOME/Downloads/BIOS"
+SHARED_DIR="$HOME/Public"
+mkdir -p "$VM_DIR" "$SHARED_DIR"
+
+# --- Helper Functions ---
+detect_gpu() {
+    [ -e "/dev/dri/renderD128" ] && echo "/dev/dri/renderD128" || echo "/dev/dri/renderD129"
+}
+
+list_vms() {
+    find "$VM_DIR" -maxdepth 2 -name "vm.conf" -printf "%h\n" | xargs -n 1 basename
+}
+
+# --- Core Actions ---
+
+create_vm() {
+    # 1. ISO Selection
+    local iso_list=$(ls -1 "$ISO_DIR" 2>/dev/null)
+    [[ -z "$iso_list" ]] && { gum style --foreground 196 "No ISOs found in $ISO_DIR"; return 1 }
+    local selected_iso=$(echo "$iso_list" | gum choose --header "Select Installation ISO")
+    [[ -z "$selected_iso" ]] && return
+
+    # 2. Name & Specs
+    local vm_name=$(gum input --placeholder "VM Name (e.g., win10-lab)")
+    [[ -z "$vm_name" ]] && return
+    local vm_path="$VM_DIR/$vm_name"
+    [[ -d "$vm_path" ]] && { gum style --foreground 196 "VM already exists!"; return 1 }
+
+    local vm_mem=$(gum input --placeholder "Memory (MB)" --value "4096")
+    local vm_cpus=$(gum input --placeholder "CPU Cores" --value "4")
+    local vm_disk=$(gum input --placeholder "Disk Size (GB)" --value "40")
+
+    # 3. Provisioning
+    mkdir -p "$vm_path/tpm"
+    local disk_path="$vm_path/disk.qcow2"
+    
+    gum spin --title "Creating virtual disk..." -- \
+        qemu-img create -f qcow2 -o nocow=on "$disk_path" "${vm_disk}G"
+
+    cat <<EOF > "$vm_path/vm.conf"
+VM_NAME="$vm_name"
+VM_MEM="$vm_mem"
+VM_CPUS="$vm_cpus"
+VM_DISK_SIZE="$vm_disk"
+ISO_PATH="$ISO_DIR/$selected_iso"
+VM_DISK_PATH="$disk_path"
+EOF
+
+    gum style --foreground 82 "✅ VM '$vm_name' created successfully."
+}
+
+start_vm() {
+    local vm_name="$1"
+    source "$VM_DIR/$vm_name/vm.conf"
+    
+    local VARS_PATH="$VM_DIR/$vm_name/OVMF_VARS.fd"
+    local VARS_TEMPLATE="$BIOS_DIR/OVMF_VARS_4M.secboot.fd"
+    local RENDER_NODE=$(detect_gpu)
+    local TPM_STATE_DIR="$VM_DIR/$vm_name/tpm"
+    local TPM_SOCK_PATH="$TPM_STATE_DIR/swtpm-sock"
+    local DRIVER_ISO="$ISO_DIR/virtio-win.iso"
+
+    # Ensure UEFI Variables exist
+    [[ ! -f "$VARS_PATH" ]] && cp "$VARS_TEMPLATE" "$VARS_PATH"
+
+    # Start TPM (Crucial for Windows 11 / Secure Boot)
+    pkill -f "swtpm.*$vm_name" 2>/dev/null
+    rm -f "$TPM_SOCK_PATH"
+    swtpm socket --tpm2 --tpmstate "dir=$TPM_STATE_DIR" \
+        --ctrl "type=unixio,path=$TPM_SOCK_PATH" --terminate --daemon
+
+    # Build Base QEMU Command
+    local qemu_cmd=("qemu-system-x86_64"
+        -name "$VM_NAME" -m "$VM_MEM" -smp "$VM_CPUS"
+        -object "memory-backend-memfd,id=mem1,size=${VM_MEM}M,share=on"
+        -machine "q35,accel=kvm,memory-backend=mem1"
+        -cpu host -drive "if=pflash,format=raw,readonly=on,file=$BIOS_DIR/OVMF_CODE_4M.secboot.fd"
+        -drive "if=pflash,format=raw,file=$VARS_PATH"
+        -chardev "socket,id=chrtpm,path=$TPM_SOCK_PATH" -tpmdev "emulator,id=tpm0,chardev=chrtpm" -device "tpm-tis,tpmdev=tpm0"
+        -device "virtio-vga-gl,max_outputs=1" -display "spice-app,gl=on"
+        -spice "gl=on,rendernode=$RENDER_NODE,disable-ticketing=on"
+        -device "virtio-serial-pci" -chardev "spicevmc,id=spicechannel0,name=vdagent" -device "virtserialport,chardev=spicechannel0,name=com.redhat.spice.0"
+        -audiodev "pa,id=sound" -device "ich9-intel-hda" -device "hda-duplex,audiodev=sound"
+        -netdev "user,id=net0" -device "virtio-net-pci,netdev=net0"
+        -device "qemu-xhci,id=usb-bus" -device "usb-tablet"
+        -virtfs "local,path=$SHARED_DIR,mount_tag=hostshare,security_model=mapped-xattr,id=fsdev0"
+    )
+
+    # --- Storage Controllers ---
+    qemu_cmd+=(
+        -device "ahci,id=sata0" # We use SATA (AHCI) for CD-ROMs so Windows can see them natively. 
+        -device "virtio-scsi-pci,id=scsi0"  # We keep VirtIO-SCSI for the Hard Drive for performance.
+    )
+
+    # 1. Primary Boot ISO (Windows Installer) on SATA
+    if [[ -f "$ISO_PATH" ]] && gum confirm "Attach Installer ISO ($ISO_PATH)?"; then
+        qemu_cmd+=(
+            -drive "file=$ISO_PATH,media=cdrom,readonly=on,if=none,id=drive-cd0" 
+            -device "ide-cd,bus=sata0.0,drive=drive-cd0,bootindex=0"
+        )
+    fi
+
+    # 2. Driver ISO (VirtIO Drivers) on SATA
+    if [[ ( "${VM_NAME:l}" == *win* || "${VM_PROFILE:l}" == *win* ) && -f "$DRIVER_ISO" ]]; then
+        qemu_cmd+=(
+            -drive "file=$DRIVER_ISO,media=cdrom,readonly=on,if=none,id=drive-cd1" 
+            -device "ide-cd,bus=sata0.1,drive=drive-cd1,bootindex=2"
+        )
+        gum style --foreground 82 "💿 Windows detected: Drivers attached via SATA."
+    fi
+
+    # 3. Virtual Hard Drive on VirtIO-SCSI (The Fast One)
+    qemu_cmd+=(
+        -drive "file=$VM_DISK_PATH,if=none,format=qcow2,id=drive-hd0" 
+        -device "scsi-hd,bus=scsi0.0,drive=drive-hd0,bootindex=1"
+    )
+
+    # --- Launch ---
+    gum style --foreground 212 "🚀 Launching $VM_NAME in detached session..."
+    
+    # setsid ensures the VM survives when the terminal closes
+    # >/dev/null 2>&1 prevents 'Pipe Errors' when the terminal is gone
+    setsid "${qemu_cmd[@]}" >/dev/null 2>&1 &!
+
+    echo
+    gum style --italic --foreground 240 "  VM is now independent. You can safely close this window."
+    
+    # Wait for user input before exiting the script/terminal
+    read -k 1 -s "?Press any key to return to menu..."
+
+}
+
+edit_vm() {
+    local vm_name="$1"
+    ${EDITOR:-nano} "$VM_DIR/$vm_name/vm.conf"
+}
+
+reset_disk() {
+    local vm_name="$1"
+    source "$VM_DIR/$vm_name/vm.conf"
+    if gum confirm "Wipe all data on '$vm_name' disk?"; then
+        rm -f "$VM_DISK_PATH"
+        qemu-img create -f qcow2 -o nocow=on "$VM_DISK_PATH" "${VM_DISK_SIZE}G"
+    fi
+}
+
+delete_vm() {
+    local vm_name="$1"
+    if gum confirm "DELETE '$vm_name' permanently?"; then
+        rm -rf "$VM_DIR/$vm_name"
+    fi
+}
+
+# --- Main Interface ---
+while true; do
+    clear
+    gum style --border normal --margin "1 2" --padding "1 2" --border-foreground 212 "󰪶 QEMU/KVM Virtual Machine Manager"
+    
+    action=$(gum choose "Create New VM" "Start VM" "Edit VM Config" "Reset Disk" "Delete VM" "Exit")
+
+    [[ "$action" == "Exit" ]] && break
+    [[ "$action" == "Create New VM" ]] && { create_vm; continue }
+
+    vm_name=$(list_vms | gum choose --header "Select Virtual Machine")
+    [[ -z "$vm_name" ]] && continue
+
+    case "$action" in
+        "Start VM") start_vm "$vm_name" ;;
+        "Edit VM Config") edit_vm "$vm_name" ;;
+        "Reset Disk") reset_disk "$vm_name" ;;
+        "Delete VM") delete_vm "$vm_name" ;;
+    esac
+done

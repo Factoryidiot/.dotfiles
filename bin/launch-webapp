@@ -2,20 +2,20 @@
 
 # Get the default browser's .desktop file name
 browser_desktop_file=$(xdg-settings get default-web-browser)
+browser_executable=${browser_desktop_file%.desktop}
 
 case $browser_desktop_file in
 firefox* )
-    # Launch Firefox directly with the dedicated WebApp profile
-    exec setsid uwsm-app -- firefox --no-remote -P "WebApps" --new-window --class WebApp "$1" "${@:2}"
+    extra_flags=(--no-remote -P "WebApps" --new-window --class WebApp)
     ;;
-brave* )
-    # For Brave, launch in app mode with a specific class
-    # The executable is 'brave', not the desktop file name.
-    exec setsid uwsm-app -- brave --app="$1" --new-window --class=WebApp "${@:2}"
+brave*|helium* )
+    extra_flags=(--app="$1" --new-window --class=WebApp)
+    shift
     ;;
 *)
-    # For other browsers, extract the executable name from the .desktop file
-    browser_executable=${browser_desktop_file%.desktop}
-    exec setsid uwsm-app -- "$browser_executable" --app="$1" "${@:2}"
+    extra_flags=(--app="$1")
+    shift
     ;;
 esac
+
+exec setsid uwsm-app -- "$browser_executable" "${extra_flags[@]}" "$@"

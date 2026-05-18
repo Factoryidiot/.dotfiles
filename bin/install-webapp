@@ -2,80 +2,97 @@
 
 set -e
 
-if [ "$#" -lt 3 ]; then
-  echo -e "\e[32mLet's create a new web app you can start with the app launcher.\n\e[0m"
-  APP_NAME=$(gum input --prompt "Name> " --placeholder "My favorite web app")
-  APP_URL=$(gum input --prompt "URL> " --placeholder "https://example.com")
-  ICON_REF=$(gum input --prompt "Icon URL, path or name> " --placeholder "https://example.com/icon.png, /path/to/icon.png or 'firefox'")
-  CUSTOM_EXEC=""
-  MIME_TYPES=""
-  INTERACTIVE_MODE=true
-else
-  APP_NAME="$1"
-  APP_URL="$2"
-  ICON_REF="$3"
-  CUSTOM_EXEC="$4" # Optional custom exec command
-  MIME_TYPES="$5"  # Optional mime types
-  INTERACTIVE_MODE=false
-fi
-
-# Ensure valid execution
-if [[ -z "$APP_NAME" || -z "$APP_URL" || -z "$ICON_REF" ]]; then
-  echo "You must set app name, app URL, and icon!"
-  exit 1
-fi
-
-# Set persistent icon directory for web apps
+# Setup core directories
 ICON_DIR="$HOME/.local/share/web-apps/icons"
-if ! mkdir -p "$ICON_DIR"; then
-  echo "Error: Failed to create icon directory $ICON_DIR."
-  exit 1
-fi
-
-# Handle icon reference
-if [[ $ICON_REF =~ ^https?:// ]]; then
-  # It's a URL, download it
-  ICON_PATH="$ICON_DIR/$APP_NAME.png"
-  if ! curl -sL -o "$ICON_PATH" "$ICON_REF"; then
-    echo "Error: Failed to download icon from $ICON_REF."
-    exit 1
-  fi
-elif [[ "$ICON_REF" == /* ]]; then
-  # It's an absolute path, check if it exists and use it
-  if [ ! -f "$ICON_REF" ]; then
-    echo "Error: Icon file not found at absolute path: $ICON_REF"
-    exit 1
-  fi
-  ICON_PATH="$ICON_REF"
-elif [ -f "$ICON_REF" ]; then
-  # It's a relative path to an existing file, copy it
-  if ! cp "$ICON_REF" "$ICON_DIR/"; then
-    echo "Error: Failed to copy icon file from $ICON_REF to $ICON_DIR"
-    exit 1
-  fi
-  ICON_PATH="$ICON_DIR/$(basename "$ICON_REF")"
-else
-  # Assume it's an icon name (e.g., 'firefox')
-  ICON_PATH="$ICON_REF"
-fi
-
-
-# Use custom exec if provided, otherwise default behavior
-if [[ -n $CUSTOM_EXEC ]]; then
-  EXEC_COMMAND="$CUSTOM_EXEC"
-else
-  EXEC_COMMAND="launch-webapp $APP_URL"
-fi
-
-# Create application .desktop file
 DESKTOP_DIR="$HOME/.local/share/applications"
-if ! mkdir -p "$DESKTOP_DIR"; then
-  echo "Error: Failed to create desktop file directory $DESKTOP_DIR."
-  exit 1
-fi
-DESKTOP_FILE="$DESKTOP_DIR/$APP_NAME.desktop"
+mkdir -p "$ICON_DIR" "$DESKTOP_DIR"
 
-cat >"$DESKTOP_FILE" <<EOF
+# -----------------------------------------------------------------------------
+# Core Functions
+# -----------------------------------------------------------------------------
+
+add_web_app() {
+  if [ "$#" -lt 3 ]; then
+    echo -e "\e[32mLet's create a new web app you can start with the app launcher.\n\e[0m"
+    APP_NAME=$(gum input --prompt "Name> " --placeholder "My favorite web app")
+    APP_URL=$(gum input --prompt "URL> " --placeholder "https://example.com")
+    ICON_REF=$(gum input --prompt "Icon URL, path or name (Leave blank to use Helium cache)> " --placeholder "Press Enter to extract from browser")
+    CUSTOM_EXEC=""
+    MIME_TYPES=""
+    INTERACTIVE_MODE=true
+  else
+    APP_NAME="$1"
+    APP_URL="$2"
+    ICON_REF="$3"
+    CUSTOM_EXEC="$4"
+    MIME_TYPES="$5" 
+    INTERACTIVE_MODE=false
+  fi
+
+  if [[ -z "$APP_NAME" || -z "$APP_URL" ]]; then
+    echo "You must set at least an app name and app URL!"
+    exit 1
+  fi
+
+  if [[ "$ICON_REF" == \~/* ]]; then
+    ICON_REF="${HOME}${ICON_REF#\~}"
+  fi
+
+  ICON_PATH="$ICON_DIR/$APP_NAME.png"
+
+  if command -v sqlite3 &> /dev/null; then
+    SQLITE_CMD="sqlite3"
+  elif command -v nix &> /dev/null; then
+    echo "sqlite3 not found locally. Using 'nix run' fallback..."
+    SQLITE_CMD="nix run nixpkgs#sqlite --"
+  else
+    echo "Error: Neither sqlite3 nor nix found. Cannot parse browser database."
+    exit 1
+  fi
+
+  BROWSER_DIR="$HOME/.config/net.imput.helium/Default"
+  FAVICON_DB="$BROWSER_DIR/Favicons"
+
+  if [[ $ICON_REF =~ ^https?:// || -z "$ICON_REF" ]]; then
+    echo "Attempting to extract icon from Helium browser history..."
+    
+    if [ ! -f "$FAVICON_DB" ]; then
+      echo "Error: Favicon database not found at $FAVICON_DB"
+      exit 1
+    fi
+
+    TMP_DB=$(mktemp)
+    cp "$FAVICON_DB" "$TMP_DB"
+    DOMAIN=$(echo "$APP_URL" | awk -F/ '{print $3}')
+    
+    ${=SQLITE_CMD} "$TMP_DB" \
+      "SELECT writefile('$ICON_PATH', image_data) 
+       FROM favicon_bitmaps 
+       JOIN favicons ON favicons.id = favicon_bitmaps.icon_id 
+       WHERE favicons.url LIKE '%$DOMAIN%' 
+       ORDER BY width DESC LIMIT 1;" > /dev/null
+
+    rm "$TMP_DB"
+
+    if [ ! -s "$ICON_PATH" ]; then
+      rm -f "$ICON_PATH"
+      echo "Could not find a cached icon for $DOMAIN in your Helium profile."
+      ICON_PATH=$(gum input --prompt "Icon fallback (path or icon name)> " --placeholder "firefox")
+    else
+      echo "Successfully pulled live tab icon from Helium!"
+    fi
+
+  elif [[ -f "$ICON_REF" ]]; then
+    echo "Copying local file icon..."
+    cp "$ICON_REF" "$ICON_PATH"
+  else
+    ICON_PATH="$ICON_REF"
+  fi
+
+  EXEC_COMMAND="${CUSTOM_EXEC:-launch-webapp $APP_URL}"
+  DESKTOP_FILE="$DESKTOP_DIR/$APP_NAME.desktop"
+
+  cat >"$DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Version=1.0
 Name=$APP_NAME
@@ -88,16 +105,86 @@ StartupNotify=true
 Categories=WebApp;
 EOF
 
-# Add mime types if provided
-if [[ -n $MIME_TYPES ]]; then
-  echo "MimeType=$MIME_TYPES" >>"$DESKTOP_FILE"
+  if [[ -n $MIME_TYPES ]]; then
+    echo "MimeType=$MIME_TYPES" >>"$DESKTOP_FILE"
+  fi
+
+  chmod +x "$DESKTOP_FILE"
+  update-desktop-database -q "$DESKTOP_DIR" &> /dev/null || true
+
+  if [[ $INTERACTIVE_MODE == true ]]; then
+    echo -e "\\nYou can now find '$APP_NAME' using the app launcher (SUPER + SPACE)\\n"
+    echo "Press Enter to close this window..."
+    read -r
+  fi
+}
+
+delete_web_app() {
+  echo -e "\e[31mSelect Web Apps to remove (Space to select, Enter to confirm):\n\e[0m"
+  
+  # Find all managed desktop configurations inside your local directory belonging to WebApp category
+  # Filter them to grab just the plain file names cleanly
+  local targets=()
+  for f in "$DESKTOP_DIR"/*.desktop; do
+    if [ -f "$f" ] && grep -q "Categories=.*WebApp" "$f"; then
+      targets+=("$(basename "$f" .desktop)")
+    fi
+  done
+
+  if [ ${#targets[@]} -eq 0 ]; then
+    echo "No Web Apps found to delete."
+    echo "Press Enter to return..."
+    read -r
+    return
+  fi
+
+  # Present list via interactive multi-select filter interface
+  CHOICES=$(printf "%s\n" "${targets[@]}" | gum filter --no-limit --placeholder="Search apps to remove...")
+
+  if [ -z "$CHOICES" ]; then
+    echo "Deletion cancelled. No apps selected."
+    return
+  fi
+
+  # Iterate choices and securely remove desktop launch files and icons
+  echo "$CHOICES" | while read -r TARGET; do
+    if [ -n "$TARGET" ]; then
+      echo "Removing $TARGET..."
+      rm -f "$DESKTOP_DIR/$TARGET.desktop"
+      rm -f "$ICON_DIR/$TARGET.png"
+    fi
+  done
+
+  update-desktop-database -q "$DESKTOP_DIR" &> /dev/null || true
+  echo -e "\nSuccessfully cleaned up selected Web Apps!"
+  echo "Press Enter to return..."
+  read -r
+}
+
+# -----------------------------------------------------------------------------
+# Main Entry Point Execution Routing
+# -----------------------------------------------------------------------------
+
+# If parameters are passed, completely skip interactive menus and execute directly
+if [ "$#" -gt 0 ]; then
+  add_web_app "$@"
+  exit 0
 fi
 
-chmod +x "$DESKTOP_FILE"
+# Otherwise, pull up the new clean Master Submenu layout
+echo -e "\e[34m== Web App Submenu ==\e[0m"
+ACTION=$(gum choose "Add Web App" "Delete Web App" "Exit")
 
-# Refresh the desktop database to make the new file available
-update-desktop-database -q "$DESKTOP_DIR" &> /dev/null || true
-
-if [[ $INTERACTIVE_MODE == true ]]; then
-  echo -e "\\nYou can now find '$APP_NAME' using the app launcher (SUPER + SPACE)\\n"
-fi
+case "$ACTION" in
+  "Add Web App")
+    clear
+    add_web_app
+    ;;
+  "Delete Web App")
+    clear
+    delete_web_app
+    ;;
+  *)
+    exit 0
+    ;;
+esac

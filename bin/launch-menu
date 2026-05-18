@@ -153,10 +153,10 @@ show_vms_menu() {
 
 show_install_menu() {
   local selection
-  selection=$(menu "Install" "󰣇  Package\n  Web App")
+  selection=$(menu "Install" "󰣇  Package\n  Add Web App")
   case "$selection" in
     *Package*) xdg-terminal-exec pkg-install ;;
-    *Web*) tui install-webapp ;;
+    *Web*) xdg-terminal-exec install-webapp ;;
     *) back_to show_main_menu ;;
   esac
 }
@@ -177,13 +177,16 @@ show_system_menu() {
 
 show_main_menu() {
   local selection
-  selection=$(menu "Go" "󰀻  Apps\n󱓞  Actions\n  Setup\n󰉉  Install\n  Virtual Machines\n󰧑  Help\n  System")
+  selection=$(menu "Go" "󰀻  Apps\n󱓞  Actions\n  Setup\n  Virtual Machines\n  Web App\n󰧑  Help\n  System")
 
   case "${selection:l}" in
     *apps*) transition_wait; launch-menu-applications -p "Launch…" ;;
     *actions*) transition_wait; show_actions_menu ;;
     *setup*) transition_wait; show_setup_menu ;;
-    *install*) transition_wait; show_install_menu ;;
+    *"web app"*) 
+      transition_wait
+      alacritty --class dot.nix.install-webapp -e install-webapp 
+      ;;
     *"virtual machines"*) transition_wait; show_vms_menu ;;
     *help*) transition_wait; show_help_menu ;;
     *system*) transition_wait; show_system_menu ;;

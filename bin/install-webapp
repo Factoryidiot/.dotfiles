@@ -3,8 +3,8 @@
 set -e
 
 # Setup core directories
-ICON_DIR="$HOME/.local/share/web-apps/icons"
 DESKTOP_DIR="$HOME/.local/share/applications"
+ICON_DIR="$DESKTOP_DIR/icons"
 mkdir -p "$ICON_DIR" "$DESKTOP_DIR"
 
 # -----------------------------------------------------------------------------
@@ -77,7 +77,7 @@ add_web_app() {
     if [ ! -s "$ICON_PATH" ]; then
       rm -f "$ICON_PATH"
       echo "Could not find a cached icon for $DOMAIN in your Helium profile."
-      ICON_PATH=$(gum input --prompt "Icon fallback (path or icon name)> " --placeholder "firefox")
+      ICON_PATH=$(gum input --prompt "Icon fallback (path or icon name)> " --placeholder "helium")
     else
       echo "Successfully pulled live tab icon from Helium!"
     fi

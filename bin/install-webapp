@@ -7,6 +7,9 @@ DESKTOP_DIR="$HOME/.local/share/applications"
 ICON_DIR="$DESKTOP_DIR/icons"
 mkdir -p "$ICON_DIR" "$DESKTOP_DIR"
 
+BROWSER_DIR="$HOME/.config/chromium/Default"
+FAVICON_DB="$BROWSER_DIR/Favicons"
+
 # -----------------------------------------------------------------------------
 # Core Functions
 # -----------------------------------------------------------------------------
@@ -50,8 +53,6 @@ add_web_app() {
     exit 1
   fi
 
-  BROWSER_DIR="$HOME/.config/net.imput.helium/Default"
-  FAVICON_DB="$BROWSER_DIR/Favicons"
 
   if [[ $ICON_REF =~ ^https?:// || -z "$ICON_REF" ]]; then
     echo "Attempting to extract icon from Helium browser history..."

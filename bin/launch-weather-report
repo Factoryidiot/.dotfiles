@@ -1,0 +1,19 @@
+#!/usr/bin/env zsh
+
+local config_file="$HOME/.dotfiles/weather/locations.json"
+if [[ ! -f "$config_file" ]]; then
+  notify-send "Weather config not found"
+  exit 1
+fi
+
+local default_location
+default_location=$(jq -r '.default' "$config_file" 2>/dev/null)
+if [[ -z "$default_location" ]]; then
+  notify-send "Default weather location not set"
+  exit 1
+fi
+
+local encoded_location
+encoded_location=$(jq -s -R -r @uri <<< "$default_location")
+
+launch-webapp "https://wttr.in/$encoded_location"

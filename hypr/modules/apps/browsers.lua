@@ -4,9 +4,9 @@
 
 -- Security hardening & layout for Bitwarden
 hl.window_rule({
-    match = { class = "^(Bitwarden)$" },
-    tag = "+floating-window",
-    no_screen_share = true
+  match = { class = "^(Bitwarden)$" },
+  tag = "+floating-window",
+  no_screen_share = true
 })
 
 -- Browser categorization rules via regex matching

@@ -20,14 +20,13 @@ focused=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true).name')
 terminal=$(xdg-terminal-exec --print-id)
 
 for m in $(hyprctl monitors -j | jq -r '.[] | .name'); do
-  hyprctl dispatch focusmonitor $m
+  # v0.55 Fix: Use Lua API syntax for monitor focusing
+  hyprctl dispatch "hl.dsp.focus({ monitor = '$m' })"
 
   case $terminal in
   *Alacritty*)
-    hyprctl dispatch exec -- \
-      alacritty --class=dot.nix.screensaver \
-      --config-file ~/.config/alacritty/screensaver.toml \
-      -e cmd-screensaver
+    # v0.55 Fix: Use hl.dsp.exec_cmd and escape interior strings with single quotes
+    hyprctl dispatch "hl.dsp.exec_cmd('alacritty --class=dot.nix.screensaver --config-file ~/.config/alacritty/screensaver.toml -e cmd-screensaver')"
     ;;
   *)
     notify-send "✋  Screensaver only runs in Alacritty"
@@ -35,4 +34,5 @@ for m in $(hyprctl monitors -j | jq -r '.[] | .name'); do
   esac
 done
 
-hyprctl dispatch focusmonitor $focused
+# v0.55 Fix: Use Lua API syntax to return to the previously focused monitor
+hyprctl dispatch "hl.dsp.focus({ monitor = '$focused' })"

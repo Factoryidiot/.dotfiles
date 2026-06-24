@@ -36,8 +36,9 @@
 #pulseaudio,
 #custom-launch-menu,
 #custom-screenrecording-indicator,
-#custom-update {
-  min-width: 12px;
+#custom-update,
+#custom-weather {
+  min-width: 10px;
   margin: 0 7.5px;
 }
 

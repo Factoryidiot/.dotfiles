@@ -25,10 +25,10 @@ hl.bind(mainMod .. " + SHIFT + k", hl.dsp.window.move({ direction = "up" }), { d
 hl.bind(mainMod .. " + SHIFT + j", hl.dsp.window.move({ direction = "down" }), { desc = "Move window down" })
 
 -- Resize window (Passing explicit x and y values for the delta vector)
-hl.bind(mainMod .. " + ALT + h", hl.dsp.window.resize({ x = -20, y = 0 }), { desc = "Resize left" })
-hl.bind(mainMod .. " + ALT + l", hl.dsp.window.resize({ x = 20, y = 0 }), { desc = "Resize right" })
-hl.bind(mainMod .. " + ALT + k", hl.dsp.window.resize({ x = 0, y = -20 }), { desc = "Resize up" })
-hl.bind(mainMod .. " + ALT + j", hl.dsp.window.resize({ x = 0, y = 20 }), { desc = "Resize down" })
+hl.bind(mainMod .. " + ALT + h", hl.dsp.window.resize({ x = -20, y = 0, relative = true }), { desc = "Resize left" })
+hl.bind(mainMod .. " + ALT + l", hl.dsp.window.resize({ x = 20, y = 0, relative = true }), { desc = "Resize right" })
+hl.bind(mainMod .. " + ALT + k", hl.dsp.window.resize({ x = 0, y = -20, relative = true }), { desc = "Resize up" })
+hl.bind(mainMod .. " + ALT + j", hl.dsp.window.resize({ x = 0, y = 20, relative = true }), { desc = "Resize down" })
 
 -- Mouse dragging
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })

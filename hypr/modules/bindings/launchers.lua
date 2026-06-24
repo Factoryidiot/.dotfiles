@@ -7,7 +7,7 @@ hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd([[uwsm-app -- xdg-terminal-exec 
 hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("launch-menu-applications"), { desc = "Application menu" })
 hl.bind(mainMod .. " + ALT + SPACE", hl.dsp.exec_cmd("launch-menu"), { desc = "Menu" })
 hl.bind(mainMod .. " + F", hl.dsp.exec_cmd("launch-or-focus-tui yazi"), { desc = "File manager" })
-hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("uwsm-app -- chromium"), { desc = "Web browser" })
+hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("uwsm-app -- firefox"), { desc = "Web browser" })
 
 -- [Flatpak]
 hl.bind(mainMod .. " + P", hl.dsp.exec_cmd([[launch-or-focus ^bitwarden$ "uwsm-app -- bitwarden.desktop -disable-gpu --enable-wayland-ime"]]), { desc = "Password manager" })

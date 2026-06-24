@@ -20,27 +20,23 @@ menu() {
   local options="$2"
   local extra="$3"
   local preselect="$4"
-
-  read -r -A args <<<"$extra"
+  local args=( ${(z)extra} )
 
   if [[ -n "$preselect" ]]; then
-    local index
-    index=$(echo -e "$options" | grep -nxF "$preselect" | cut -d: -f1)
-    [[ -n "$index" ]] && args+=("-c" "$index")
+    local opt_array=( ${(f)options} ) # Split options string by newline into a clean native Zsh array
+    local index=${opt_array[(I)*$preselect*]} # Find the exact structural index of our preselect element
+    [[ $index -gt 0 ]] && args+=("-c" "$index")
   fi
 
-  # Check if walker service is active
   if systemctl --user is-active --quiet walker.service; then
-    # Use the walker binary to communicate with the service
-    printf "%b" "$options" | walker --dmenu --width 295 -p "$prompt…" "${args[@]}"
+    print -l -- "${(f)options}" | walker --dmenu --width 295 -p "${prompt}…" "${args[@]}"
   else
     # Fallback to the wrapper if the service is down
-    printf "%b" "$options" | launch-menu-applications --dmenu --width 295 -p "$prompt…" "${args[@]}"
+    print -r -- "${(f)options}" | launch-menu-applications --dmenu --width 295 -p "${prompt}…" "${args[@]}"
   fi
 }
 
-#*----- Submenus ---------------------------------
-
+#+----- Submenus ---------------------------------
 show_help_menu() {
   local selection
   selection=$(menu "Learn" "  Keybindings\n  Home-Manager\n  Hyprland\n  Neovim\n  Nixos\n󱆃  Zsh")
@@ -110,40 +106,181 @@ show_toggle_menu() {
 }
 
 show_setup_menu() {
-  local options="  Audio\n  Wifi\n󰂯  Bluetooth\n󱐋  Power Profile\n󰍹  Monitors\n  Keybindings"
+  local options="  Audio\n  Wifi\n󰂯  Bluetooth\n󱐋  Power Profile\n󰍹  Monitors\n  Keybindings\n  Weather"
   local selection
   selection=$(menu "Setup" "$options")
   case "$selection" in
     *Audio*) launch-or-focus-tui wiremix ;;
     *Wifi*) launch-wifi ;;
     *Bluetooth*) launch-bluetooth ;;
-    *Power*) transition_wait; show_setup_power_menu ;;
+    *Power*) transition_wait; show_power_menu ;;
     *Monitors*) launch-editor ~/.dotfiles/hypr/monitors.conf ;;
     *Keybindings*) launch-editor ~/.dotfiles/hypr/keybindings.conf ;;
+    *Weather*) transition_wait; show_weather_menu ;;
     *) back_to show_main_menu ;;
   esac
 }
 
-show_setup_power_menu() {
-  local current_raw
-  current_raw=$(asusctl profile get | grep "Active profile" | awk -F': ' '{print $2}')
+show_power_menu() {
+  # 1. Fetch raw status directly into an array split by newlines
+  local current_raw=("${(f)$(asusctl profile get)}")
 
+  # 2. Extract line 1 and strip "Active profile: " from it
+  local active_line="${current_raw[1]}"
+  local active_profile="${active_line##Active profile: }"
+  
+  # Strip hidden whitespaces/tabs
+  active_profile="${active_profile//[[:space:]]/}"
+
+  # 3. Establish base profiles map
+  local p_label="󰓅  Performance"
+  local b_label="󰾆  Balanced"
+  local q_label="󰾜  Quiet"
+
+  # 4. Dynamically append a text label to the active item and set the index target
   local preselect=""
-  case "${current_raw:l}" in
-    *performance*) preselect="  Performance" ;;
-    *balanced*)    preselect="  Balanced" ;;
-    *quiet*)       preselect="🌱 Power Saver" ;;
+  case "${active_profile:l}" in
+    performance)
+      p_label="$p_label (Current)"
+      preselect="Performance"
+      ;;
+    balanced)
+      b_label="$b_label (Current)"
+      preselect="Balanced"
+      ;;
+    quiet)
+      q_label="$q_label (Current)"
+      preselect="Quiet"
+      ;;
   esac
 
-  local selection
-  selection=$(menu "Power Profile" "  Performance\n  Balanced\n🌱 Power Saver" "" "$preselect")
+  # 5. Assemble options block with active markers
+  local options="${p_label}\n${b_label}\n${q_label}"
 
-  case "$selection" in
-    *Performance*) asusctl profile set performance ;;
-    *Balanced*)    asusctl profile set balanced ;;
-    *Saver*)       asusctl profile set quiet ;;
+  # 6. Hand off to the menu layer
+  local selection
+  selection=$(menu "Power Profile" "$options" "" "$preselect")
+
+  # 7. Execute system adjustment based on choice
+  case "${selection:l}" in
+    *performance*) asusctl profile set Performance ;;
+    *balanced*)    asusctl profile set Balanced ;;
+    *quiet*)       asusctl profile set Quiet ;;
     *)             back_to show_setup_menu ;;
   esac
+}
+
+show_weather_menu() {
+  local config_file="$HOME/.dotfiles/weather/locations.json"
+  if [[ ! -f "$config_file" ]]; then
+    # Create a default config if it's missing
+    mkdir -p "$(dirname "$config_file")"
+    print '{"default": "Te Aro", "locations": ["Te Aro", "Wellington"]}' > "$config_file"
+  fi
+
+  local default_location
+  default_location=$(jq -r '.default' "$config_file" 2>/dev/null)
+  if [[ -z "$default_location" ]]; then
+    default_location="Not Set"
+  fi
+
+  local options="󰝚 Set Default\n Add Location\n Remove Location"
+
+  local selection
+  selection=$(menu "Weather ($default_location)" "$options")
+
+  case "$selection" in
+    *"Set Default"*) transition_wait; show_weather_set_default_menu ;;
+    *"Add Location"*) transition_wait; show_weather_add_location_menu ;;
+    *"Remove Location"*) transition_wait; show_weather_remove_location_menu ;;
+    *) back_to show_setup_menu ;;
+  esac
+}
+
+show_weather_set_default_menu() {
+  local config_file="$HOME/.dotfiles/weather/locations.json"
+  local default
+  default=$(jq -r '.default' "$config_file" 2>/dev/null)
+  
+  local locations_list=(${(f)"$(jq -r '.locations[]' "$config_file" 2>/dev/null)"})
+
+  local options=""
+  local preselect=""
+  for loc in "${locations_list[@]}"; do
+    if [[ "$loc" == "$default" ]]; then
+      options+="󰄬 $loc (Current)\n"
+      preselect="$loc"
+    else
+      options+="󰝖 $loc\n"
+    fi
+  done
+  options=${options%\\n}
+
+  local selection
+  selection=$(menu "Set Default Location" "$options" "" "$preselect")
+
+  if [[ -n "$selection" ]]; then
+    local chosen_loc=${selection#* } # remove icon
+    chosen_loc=${chosen_loc% (Current)*} # remove suffix
+    
+    if [[ "$chosen_loc" != "$default" ]]; then
+        local tmp_file
+        tmp_file=$(mktemp)
+        jq --arg new_default "$chosen_loc" '.default = $new_default' "$config_file" > "$tmp_file" && mv "$tmp_file" "$config_file"
+        pkill -12 waybar
+    fi
+  fi
+  
+  back_to show_weather_menu
+}
+
+show_weather_add_location_menu() {
+  local new_location
+  new_location=$(menu "Add New Location" "")
+
+  if [[ -n "$new_location" ]]; then
+    local config_file="$HOME/.dotfiles/weather/locations.json"
+    
+    # Check if location already exists
+    if ! jq -e --arg loc "$new_location" '.locations[] | select(. == $loc)' "$config_file" > /dev/null; then
+        local tmp_file
+        tmp_file=$(mktemp)
+        jq --arg new_loc "$new_location" '.locations += [$new_loc]' "$config_file" > "$tmp_file" && mv "$tmp_file" "$config_file"
+    fi
+  fi
+
+  back_to show_weather_menu
+}
+
+show_weather_remove_location_menu() {
+  local config_file="$HOME/.dotfiles/weather/locations.json"
+  local default
+  default=$(jq -r '.default' "$config_file" 2>/dev/null)
+  
+  local locations_list=(${(f)"$(jq -r '.locations[]' "$config_file" 2>/dev/null)"})
+
+  local options=""
+  for loc in "${locations_list[@]}"; do
+    if [[ "$loc" == "$default" ]]; then
+      options+="󰄬 $loc (Default)\n"
+    else
+      options+="󰝖 $loc\n"
+    fi
+  done
+  options=${options%\\n}
+
+  local selection
+  selection=$(menu "Remove Location" "$options")
+
+  if [[ -n "$selection" && "$selection" != *"(Default)"* ]]; then
+    local to_remove=${selection#* } # remove icon
+    
+    local tmp_file
+    tmp_file=$(mktemp)
+    jq --arg to_remove "$to_remove" '.locations |= map(select(. != $to_remove))' "$config_file" > "$tmp_file" && mv "$tmp_file" "$config_file"
+  fi
+
+  back_to show_weather_menu
 }
 
 show_vms_menu() {
@@ -194,4 +331,16 @@ show_main_menu() {
   esac
 }
 
-show_main_menu
+if [[ -n "$1" ]]; then
+  local target_func="show_${1:l}_menu"
+
+  if (( $+functions[$target_func] )); then
+    BACK_TO_EXIT=true
+    $target_func   # Call the function dynamically!
+  else
+    echo "Error: Submenu '$1' (tried: $target_func) does not exist." >&2
+    exit 1
+  fi
+else
+  show_main_menu
+fi

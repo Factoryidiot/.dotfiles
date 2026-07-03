@@ -17,6 +17,7 @@ hl.bind(mainMod .. " + N", hl.dsp.exec_cmd([[launch-or-focus ^obsidian$ "uwsm-ap
 hl.bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd('launch-webapp "https://calendar.google.com/"'), { desc = "Calendar" })
 hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exec_cmd('launch-webapp "https://gmail.com/"'), { desc = "Gmail" })
 hl.bind(mainMod .. " + SHIFT + G", hl.dsp.exec_cmd('launch-webapp "https://gemini.google.com/"'), { desc = "Gemini" })
+hl.bind(mainMod .. " + SHIFT + H", hl.dsp.exec_cmd('launch-webapp "https://chat.google.com/"'), { desc = "Chat" })
 hl.bind(mainMod .. " + SHIFT + Y", hl.dsp.exec_cmd('launch-webapp "https://youtube.com/"'), { desc = "YouTube" })
 
 -- [Clipboard]

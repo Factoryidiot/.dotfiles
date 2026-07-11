@@ -3,37 +3,6 @@
 #[@](bg:nord0 fg:nord4)\
 #$hostname\
 
-#format = """
-#[](nord0)\
-#$os\
-#[](bg:nord1 fg:nord0)\
-#$directory\
-#[](bg:nord2 fg:nord1)\
-#$git_branch\
-#$git_status\
-#$git_metrics\
-#[](bg:nord3 fg:nord2)\
-#$c\
-#$elixir\
-#$elm\
-#$golang\
-#$gradle\
-#$haskell\
-#$java\
-#$julia\
-#$lua\
-#$nodejs\
-#$nim\
-#$python\
-#$rust\
-#$scala\
-#$aws\
-#$docker_context\
-#[](fg:nord3)
-#($fill [](fg:nord3)$jobs$cmd_duration[](nord0))
-#$status
-#"""
-
 format = """
 [](nord0)\
 $os\
@@ -146,6 +115,7 @@ disabled = false
 # programming
 [c]
 symbol = ' '
+detect_extensions = ['c', 'h']
 style = 'bg:nord3 fg:nord10'
 format = '[ $symbol ($version) ]($style)'
 
@@ -184,16 +154,22 @@ style = 'bg:nord3 fg:nord4'
 format = '[ $symbol ($version) ]($style)'
 
 [lua]
-format = '[$symbol($version )]($style)'
 symbol = ' '
-
-[nodejs]
-symbol = ''
-style = 'bg:nord3 fg:nord4'
-format = '[ $symbol ($version) ]($style)'
+style = 'bg:nord3 fg:nord10'
+format = '[ $symbol ($version )]($style)'
 
 [nim]
 symbol = '󰆥 '
+style = 'bg:nord3 fg:nord4'
+format = '[ $symbol ($version) ]($style)'
+
+[nix_shell]
+symbol = '  '
+style = 'bg:nord3 fg:nord8'
+format = '[ $symbol ($version) ]($style)'
+
+[nodejs]
+symbol = ''
 style = 'bg:nord3 fg:nord4'
 format = '[ $symbol ($version) ]($style)'
 
@@ -236,11 +212,13 @@ style = 'bg:nord3 fg:nord4'
 format = '[ $duration ]($style)'
 
 # status
+#success_symbol = '[](fg:nord14)'
+#symbol = '[](fg:nord11)'
 [status]
 format = '[ $symbol ]($style)'
 style = "bold"
-symbol = '[](fg:nord11)'
-success_symbol = '[](fg:nord14)'
+symbol = '[❯](fg:nord11)'
+success_symbol = '[❯](fg:nord14)'
 not_executable_symbol = '[🛇](fg:nord11)'
 not_found_symbol = '[󰍉](fg:nord11)'
 sigint_symbol = '[](fg:nord13)'

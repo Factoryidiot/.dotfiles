@@ -4,9 +4,8 @@
 #$hostname\
 
 format = """
-[](nord0)\
 $os\
-[](bg:nord1 fg:nord0)\
+[](bg:nord2 fg:nord4)\
 $directory\
 [](bg:nord2 fg:nord1)\
 $git_branch\
@@ -31,10 +30,11 @@ $aws\
 $docker_context\
 [](fg:nord3)\
 $fill\
-([](fg:nord3)$jobs$cmd_duration[](nord0))
-$status
+([](fg:nord3)$status[$username](bg:nord3 fg:nord4)[@](bg:nord3 fg:nord4)[$hostname](bg:nord3 fg:nord4)$jobs$cmd_duration)
+$character
 """
 
+#([](fg:nord3)[$status$jobs$cmd_duration](bg:nord3))
 scan_timeout = 50
 command_timeout = 1000
 add_newline = false
@@ -58,8 +58,8 @@ nord14 = '#A2BE8A'  # Green
 
 # username, host and OS
 [username]
-style_root = 'bg:nord0 fg:nord11'
-style_user = 'bg:nord0 fg:nord4'
+style_root = 'bg:nord3 fg:nord11'
+style_user = 'bg:nord3 fg:nord4'
 format = '[$user]($style)'
 show_always = true
 disabled = false
@@ -68,33 +68,35 @@ disabled = false
 ssh_only = false
 ssh_symbol = ' '
 trim_at = '.'
-format = '[$hostname$ssh_symbol]($style)'
-style = 'bg:nord0 fg:nord4'
+format = '[$hostname$ssh_symbol ]($style)'
+style = 'bg:nord3 fg:nord4'
 disabled = false
 
 [os]
 format = '[ $symbol ]($style)'
-style = 'bg:nord0 fg:nord4'
+style = 'bg:nord4 fg:nord1'
 disabled = false
 # for symbols look at the end of the file
 
-# directory
 [directory]
 truncation_length = 1
 truncate_to_repo = true
-format = '[ $path ]($style)[$read_only]($read_only_style)'
+format = '[$read_only]($read_only_style)[ $path ]($style)'
 style = 'bg:nord1 fg:nord4'
-disabled = false
-read_only = ' 󰌾 '
+read_only = ' 󰌾'
 read_only_style = 'bg:nord1 fg:nord11'
 truncation_symbol = ''
+disabled = false
+use_logical_path = true
 
 [directory.substitutions]
+'~' = ' ~'
 'Documents' = '󰈙'
 'Downloads' = ' '
 'Music' = ' '
 'Pictures' = ' '
 'Projects' = ' '
+'Videos' = ' '
 
 # git
 [git_branch]
@@ -204,25 +206,23 @@ detect_extensions = ['Dockerfile']
 symbol = ' '
 style = 'bg:nord3 fg:nord11'
 number_threshold = 1
-format = '[ $symbol $number ]($style)'
+format = '[$symbol$number ]($style)'
 
 [cmd_duration]
 min_time = 500
 style = 'bg:nord3 fg:nord4'
-format = '[ $duration ]($style)'
+format = '[$duration ]($style)'
 
 # status
-#success_symbol = '[](fg:nord14)'
-#symbol = '[](fg:nord11)'
 [status]
 format = '[ $symbol ]($style)'
-style = "bold"
-symbol = '[❯](fg:nord11)'
-success_symbol = '[❯](fg:nord14)'
-not_executable_symbol = '[🛇](fg:nord11)'
-not_found_symbol = '[󰍉](fg:nord11)'
-sigint_symbol = '[](fg:nord13)'
-signal_symbol = '[](fg:nord11)'
+style = "bg:nord3 bold"
+symbol = '[](bg:nord3 fg:nord11)'
+success_symbol = '[](bg:nord3 fg:nord14)'
+not_executable_symbol = '[🛇](bg:nord3 fg:nord11)'
+not_found_symbol = '[󰍉](bg:nord3 fg:nord11)'
+sigint_symbol = '[](bg:nord3 fg:nord13)'
+signal_symbol = '[](bg:nord3 fg:nord11)'
 disabled = false
 
 # OS symbols

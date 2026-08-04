@@ -27,7 +27,7 @@ printf '\033]11;rgb:00/00/00\007'  # Black background
 hyprctl keyword cursor:invisible true &>/dev/null
 stty -echo # Disable echoing of input keys
 
-  hyprctlse keyword cursor:invisible false &>/dev/null || true
+  hyprctl keyword cursor:invisible false &>/dev/null || true
 while true; do
   # Run tte in the background
   tte -i ~/.dotfiles/bin/screensaver.txt \

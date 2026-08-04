@@ -31,5 +31,6 @@ hl.bind(mainMod .. " + ALT + k", hl.dsp.window.resize({ x = 0, y = -20, relative
 hl.bind(mainMod .. " + ALT + j", hl.dsp.window.resize({ x = 0, y = 20, relative = true }), { desc = "Resize down" })
 
 -- Mouse dragging
-hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
-hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
+-- Mouse dragging
+hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true, desc = "Drag window" })
+hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true, desc = "Resize window" })

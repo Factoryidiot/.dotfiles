@@ -43,6 +43,11 @@ parse_bindings() {
     key_combo = $1 ($1 != "" && $2 != "" ? " + " : "") $2;
     gsub(/^[ \t]+|[ \t]+$/, "", key_combo);
 
+    # Translate Hyprland mouse codes to readable text
+    sub(/mouse:272/, "Left Click", key_combo);
+    sub(/mouse:273/, "Right Click", key_combo);
+    sub(/mouse:274/, "Middle Click", key_combo);
+
     action = $3;
     if (action == "") {
         for (i = 4; i <= NF; i++) {
@@ -53,8 +58,13 @@ parse_bindings() {
         gsub(/^[ \t]+|[ \t]+$/, "", action);
     }
 
-    # ONLY print if we have an actual action and combo to avoid blank padded lines
-    if (action != "" && key_combo != "") {
+    # Catch these specific missing descriptions based on the translated key
+    if (key_combo ~ /Left Click/ && action ~ /__lua/) action = "Drag window";
+    if (key_combo ~ /Right Click/ && action ~ /__lua/) action = "Resize window";
+
+    # ONLY print if we have an actual action and combo. 
+    # Also ignore any remaining undocumented __lua bindings.
+    if (action != "" && key_combo != "" && action !~ /^__lua/) {
         # Escape XML entities for safety
         gsub(/&/, "\\&amp;", action);
         gsub(/</, "\\&lt;", action);
@@ -70,28 +80,32 @@ prioritize_entries() {
     line = $0
     # Create a lowercase version for comparison
     l_line = tolower(line)
-    
+
     prio = 100
     section = "Other"
 
     # Launchers (Apps & Webapps)
-    if (l_line ~ /terminal|application|walker|file manager|browser|password|notes|youtube|gemini|gmail/) {
+    # Added "menu" to catch "SUPER ALT + SPACE → Menu"
+    if (l_line ~ /terminal|application|walker|file manager|browser|password|notes|youtube|gemini|gmail|chat|calendar|menu/) {
         prio = 10; section = "Launchers"
     }
-    # Window Management (Focus, Resize, Move, States)
-    else if (l_line ~ /killactive|fullscreen|togglefloating|movefocus|movewindow|resizeactive|resizewindow|mouse:/) {
-        prio = 20; section = "Window Management"
-    }
     # Workspaces (Navigating and Moving windows)
+    # Evaluated BEFORE Window Management so "Move window to workspace" safely lands here
     else if (l_line ~ /workspace/) {
         prio = 30; section = "Workspace Management"
+    }
+    # Window Management (Focus, Resize, Move, States)
+    # Updated to match your custom lua descriptions
+    else if (l_line ~ /killactive|fullscreen|floating|focus|move window|resize|mouse|close/) {
+        prio = 20; section = "Window Management"
     }
     # Clipboard (Your Universal shortcuts and Walker clipboard)
     else if (l_line ~ /universal|copy|paste|cut|clipboard/) {
         prio = 40; section = "Clipboard"
     }
     # Hardware Keys (Audio, Brightness, Media)
-    else if (l_line ~ /volume|mute|brightness|next|prev|pause|play|xf86/) {
+    # Added "caps lock" to catch "2 + Caps_Lock → Caps lock"
+    else if (l_line ~ /volume|mute|brightness|next|prev|pause|play|xf86|caps lock/) {
         prio = 50; section = "Hardware"
     }
     # Session Management

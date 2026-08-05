@@ -114,8 +114,8 @@ show_setup_menu() {
     *Wifi*) launch-wifi ;;
     *Bluetooth*) launch-bluetooth ;;
     *Power*) transition_wait; show_power_menu ;;
-    *Monitors*) launch-editor ~/.dotfiles/hypr/monitors.conf ;;
-    *Keybindings*) launch-editor ~/.dotfiles/hypr/keybindings.conf ;;
+    *Monitors*) launch-editor ~/.dotfiles/hypr/modules/monitors.lua ;;
+    *Keybindings*) launch-editor ~/.dotfiles/hypr/modules/keybindings.lua ;;
     *Weather*) transition_wait; show_weather_menu ;;
     *) back_to show_main_menu ;;
   esac

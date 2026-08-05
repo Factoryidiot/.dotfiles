@@ -5,6 +5,7 @@
 hl.on("hyprland.start", function()
     -- Base session environment initialization
     hl.exec_cmd("dbus-update-activation-environment --systemd --all")
+    hl.exec_cmd("systemctl --user app-com.mitchellh.ghostty.service")
     hl.exec_cmd("systemctl --user import-environment $(env | cut -d'=' -f 1)")
 
     -- Background apps and daemons managed by UWSM

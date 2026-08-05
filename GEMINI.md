@@ -11,7 +11,8 @@ My role is to help build out and maintain the configuration and consistency for 
 The configuration files within this `.dotfiles` directory are intended to be **symlinked** to their respective homes in the user's home directory (e.g., under `~/.config/`).
 
 For example, the Hyprland configuration is linked like this:
-`~/.dotfiles/hypr/hyprland.conf` -> `~/.config/hypr/hyprland.conf`
+`~/.dotfiles/hypr/hyprland.lua` -> `~/.config/hypr/hyprland.lua`
+`~/.dotfiles/hypr/modules/` -> `~/.config/hypr/modules/`
 
 This allows for version control of the configuration while keeping the files in the locations expected by their respective applications.
 
@@ -32,12 +33,11 @@ This allows for version control of the configuration while keeping the files in 
 
 - **`github/`**: Includes environment setup scripts (`env.sh`) likely used for configuring Git or GitHub-related tools.
 
-- **`hypr/`**: This is the core of the desktop configuration, containing numerous `.conf` files for the Hyprland compositor. This includes settings for:
-    - `hyprland.conf`: Main configuration.
-    - `autostart.conf`: Applications to launch on startup.
-    - `keybindings.conf`: Key and mouse bindings.
-    - `hypridle.conf`, `hyprlock.conf`: Configuration for idle and screen locking.
-    - `monitors.conf`, `windows.conf`: Display and window management rules.
+- **`hypr/`**: This is the core of the desktop configuration, using Lua configuration files (`hyprland.lua` & `modules/`) alongside auxiliary daemon configs (`hypridle.conf`, `hyprlock.conf`, `hyprsunset.conf`, `theme.conf`):
+    - `hyprland.lua`: Main Lua entry point loading `modules/`.
+    - `modules/`: Modular Lua configuration files (autostart, envs, input, looknfeel, monitors, windows, keybindings).
+    - `hypridle.conf`, `hyprlock.conf`, `hyprsunset.conf`, `theme.conf`: Configuration for idle management, screen locking, blue-light control, and lockscreen themes.
+    - `deprecated/`: Holds legacy `.conf` files (`autostart.conf`, `envs.conf`, `hyprland.conf`, `input.conf`, `keybindings.conf`, `looknfeel.conf`, `monitors.conf`, `windows.conf`).
 
 - **`tmux/`**: Configuration for `tmux`, a terminal multiplexer.
 

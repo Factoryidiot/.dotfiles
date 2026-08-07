@@ -32,7 +32,7 @@ menu() {
     print -l -- "${(f)options}" | walker --dmenu --width 295 -p "${prompt}…" "${args[@]}"
   else
     # Fallback to the wrapper if the service is down
-    print -r -- "${(f)options}" | launch-menu-applications --dmenu --width 295 -p "${prompt}…" "${args[@]}"
+    print -l -- "${(f)options}" | launch-menu-applications --dmenu --width 295 -p "${prompt}…" "${args[@]}"
   fi
 }
 

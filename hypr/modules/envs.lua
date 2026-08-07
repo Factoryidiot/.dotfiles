@@ -11,13 +11,16 @@ local home = os.getenv("HOME") or ""
 local existing_xdg_dirs = os.getenv("XDG_DATA_DIRS") or ""
 hl.env("XDG_DATA_DIRS", home .. "/.local/share/web-apps:" .. existing_xdg_dirs)
 
+-- Primary AMD iGPU and secondary NVIDIA dGPU Aquamarine DRM device priority
+hl.env("AQ_DRM_DEVICES", "/dev/dri/by-path/pci-0000:65:00.0-card:/dev/dri/by-path/pci-0000:01:00.0-card")
+
 -- Force all apps to use Wayland
-hl.env("GDK_BACKEND", "wayland,x11,*")
+hl.env("GDK_BACKEND", "wayland,x11")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
 hl.env("QT_STYLE_OVERRIDE", "kvantum")
 hl.env("SDL_VIDEODRIVER", "wayland")
 hl.env("MOZ_ENABLE_WAYLAND", "1")
-hl.env("ELECTRON_OZONE_PLATFORM_HINT", "wayland")
+hl.env("ELECTRON_OZONE_PLATFORM_HINT", "auto")
 hl.env("OZONE_PLATFORM", "wayland")
 hl.env("XDG_SESSION_TYPE", "wayland")
 

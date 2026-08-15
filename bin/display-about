@@ -2,4 +2,10 @@
 
 APP_CLASS="dot.nix.display-about"
 
-exec setsid uwsm-app -- alacritty --class "$APP_CLASS" -e sh -c "fastfetch; read -n 1 -s"
+if command -v xdg-terminal-exec &>/dev/null; then
+  exec setsid uwsm-app -- xdg-terminal-exec --app-id="$APP_CLASS" -- sh -c "fastfetch; read -n 1 -s"
+elif command -v ghostty &>/dev/null; then
+  exec setsid uwsm-app -- ghostty --class="$APP_CLASS" -e sh -c "fastfetch; read -n 1 -s"
+elif command -v alacritty &>/dev/null; then
+  exec setsid uwsm-app -- alacritty --class "$APP_CLASS" -e sh -c "fastfetch; read -n 1 -s"
+fi

@@ -1,0 +1,10 @@
+# ~/.dotfiles/ghostty/screensaver
+
+# Inherit your base configuration so you don't lose fonts/padding
+config-file = config
+
+# Screensaver overrides
+background = 000000
+cursor-color = 000000
+font-size = 16
+background-opacity = 1

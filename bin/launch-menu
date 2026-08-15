@@ -285,7 +285,7 @@ show_weather_remove_location_menu() {
 
 show_vms_menu() {
   transition_wait
-  alacritty --class dot.nix.manage-vms -e manage-vm
+  xdg-terminal-exec --app-id=dot.nix.manage-vms manage-vm
 }
 
 show_install_menu() {
@@ -322,7 +322,7 @@ show_main_menu() {
     *setup*) transition_wait; show_setup_menu ;;
     *"web app"*) 
       transition_wait
-      alacritty --class dot.nix.install-webapp -e install-webapp 
+      xdg-terminal-exec --app-id=dot.nix.install-webapp install-webapp 
       ;;
     *"virtual machines"*) transition_wait; show_vms_menu ;;
     *help*) transition_wait; show_help_menu ;;

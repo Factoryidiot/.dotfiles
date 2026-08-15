@@ -2,6 +2,14 @@
 -- Monitor Configuration
 -- -----------------------------------------------------
 
+-- Universal fallback for any connected display (Auto Resolution & Position)
+hl.monitor({
+  output = "",
+  mode = "preferred",
+  position = "auto",
+  scale = 1
+})
+
 -- HDMI-A-1 at native 1440p, positioned at the origin (0x0)
 hl.monitor({
     output = "HDMI-A-1",

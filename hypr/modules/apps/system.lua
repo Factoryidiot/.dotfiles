@@ -99,7 +99,7 @@ hl.window_rule({
 
 -- Terminals & Inputs
 hl.window_rule({
-    match = { class = "Alacritty" },
+    match = { class = "Alacritty|com.mitchellh.ghostty|ghostty" },
     tag = "+terminal"
     -- Note: scroll_touchpad is a per-device input option config block setting rather than a window rules effect,
     -- so it has been omitted here. It should live inside your hl.config input table blocks.

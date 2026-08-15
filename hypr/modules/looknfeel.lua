@@ -92,6 +92,10 @@ hl.config({
     no_hardware_cursors = true,
     hide_on_key_press = true,
   },
+
+  render = {
+    direct_scanout = 0, -- Prevents page-flip contention across hybrid GPUs
+  },
 })
 
 -- -----------------------------------------------------

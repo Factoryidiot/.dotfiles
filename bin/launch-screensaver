@@ -24,17 +24,16 @@ for m in $(hyprctl monitors -j | jq -r '.[] | .name'); do
   hyprctl dispatch "hl.dsp.focus({ monitor = '$m' })"
 
   case $terminal in
-  *Alacritty*)
+  *Alacritty*|*alacritty*)
     # v0.55 Fix: Use hl.dsp.exec_cmd and escape interior strings with single quotes
     hyprctl dispatch "hl.dsp.exec_cmd('alacritty --class=dot.nix.screensaver --config-file ~/.config/alacritty/screensaver.toml -e cmd-screensaver')"
     ;;
-  *ghostty*)
+  *ghostty*|*Ghostty*|*com.mitchellh.ghostty*)
     # Launch Ghostty with the screensaver config
-    #ghostty --config-file ~/.config/ghostty/screensaver
     hyprctl dispatch "hl.dsp.exec_cmd('ghostty --class=dot.nix.screensaver --config-file=~/.config/ghostty/screensaver -e cmd-screensaver')"
     ;;
   *)
-    notify-send "✋  Screensaver only runs in Alacritty or Chosty"
+    notify-send "✋  Screensaver only runs in Alacritty or Ghostty"
     ;;
   esac
 done

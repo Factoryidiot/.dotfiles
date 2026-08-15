@@ -52,7 +52,7 @@
     "format": "\uf313",
     "on-click": "launch-menu",
     "on-click-right": "xdg-terminal-exec",
-    "tooltip-format": "Whio Menu\n\nSuper + Alt + Space"
+    "tooltip-format": "Menu\n\nSuper + Alt + Space"
   },
   "custom/weather": {
   "tooltip": true,

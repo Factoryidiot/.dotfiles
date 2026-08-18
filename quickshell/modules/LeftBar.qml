@@ -19,9 +19,9 @@ RowLayout {
         running: false
     }
 
-    // 1. Launch Menu (Arch / Menu icon)
+    // 1. Launch Menu (NixOS / Menu icon)
     IconButton {
-        iconText: ""
+        iconText: ""
         color: "#88c0d0"
         tooltipText: "Menu (Super + Alt + Space)\nRight-click: Terminal"
         paddingHorizontal: 6

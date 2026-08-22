@@ -5,13 +5,15 @@ sleep 0.05
 is_on=$(grep -h "^1$" /sys/class/leds/*capslock*/brightness 2>/dev/null | head -1)
 
 focused_mon=$(hyprctl monitors -j 2>/dev/null | jq -r '.[] | select(.focused == true).name' 2>/dev/null)
-mon_flag=""
+
+typeset -a args
+args=()
 if [[ -n "$focused_mon" ]]; then
-    mon_flag="--monitor $focused_mon"
+    args+=(--monitor "$focused_mon")
 fi
 
 if [[ -n "$is_on" ]]; then
-    swayosd-client $mon_flag --custom-message "Caps Lock: ON" --custom-icon "input-keyboard"
+    swayosd-client "${args[@]}" --custom-message "Caps Lock: ON" --custom-icon "input-keyboard"
 else
-    swayosd-client $mon_flag --custom-message "Caps Lock: OFF" --custom-icon "input-keyboard"
+    swayosd-client "${args[@]}" --custom-message "Caps Lock: OFF" --custom-icon "input-keyboard"
 fi

@@ -8,7 +8,11 @@ ShellRoot {
     id: root
 
     Variants {
-        model: Quickshell.screens
+        // Target internal laptop display (eDP), falling back to first screen if running standalone
+        model: {
+            let internal = Quickshell.screens.filter(s => s && s.name && s.name.startsWith("eDP"));
+            return internal.length > 0 ? internal : (Quickshell.screens.length > 0 ? [Quickshell.screens[0]] : []);
+        }
 
         delegate: Component {
             PanelWindow {

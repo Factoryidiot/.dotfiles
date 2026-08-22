@@ -16,6 +16,106 @@ RowLayout {
         Quickshell.execDetached(["zsh", "-c", cmd]);
     }
 
+    property var activeTrayItem: null
+    property var activeTrayAnchor: null
+    property bool trayMenuOpen: false
+
+    QsMenuOpener {
+        id: trayMenuOpener
+        menu: root.activeTrayItem ? root.activeTrayItem.menu : null
+    }
+
+    // Floating Tray Menu Popup (xdg_popup)
+    PopupWindow {
+        id: trayMenuPopup
+        anchor.window: root.bar
+        anchor.rect.x: root.activeTrayAnchor ? root.activeTrayAnchor.mapToItem(null, 0, 0).x : 0
+        anchor.rect.y: root.bar ? root.bar.height : 26
+        anchor.rect.width: root.activeTrayAnchor ? root.activeTrayAnchor.width : 20
+        anchor.rect.height: 1
+        anchor.edges: Edges.Bottom | Edges.Left
+        anchor.gravity: Edges.Bottom | Edges.Right
+
+        visible: root.trayMenuOpen && root.activeTrayItem !== null && trayMenuOpener.children.values.length > 0
+        color: "transparent"
+
+        Rectangle {
+            id: menuContainer
+            width: 190
+            implicitHeight: menuColumn.implicitHeight + 12
+            color: "#2e3440"
+            border.color: "#4c566a"
+            border.width: 1
+            radius: 6
+            clip: true
+
+            ColumnLayout {
+                id: menuColumn
+                width: parent.width
+                anchors.top: parent.top
+                anchors.topMargin: 6
+                spacing: 1
+
+                Repeater {
+                    model: trayMenuOpener.children.values
+
+                    delegate: Item {
+                        id: menuRow
+                        required property var modelData
+                        required property int index
+
+                        Layout.fillWidth: true
+                        implicitHeight: modelData.isSeparator ? 8 : 28
+                        visible: modelData.text !== "" || modelData.isSeparator
+
+                        Rectangle {
+                            visible: modelData.isSeparator
+                            anchors.centerIn: parent
+                            width: parent.width - 16
+                            height: 1
+                            color: "#434c5e"
+                        }
+
+                        Rectangle {
+                            visible: !modelData.isSeparator
+                            anchors.fill: parent
+                            anchors.leftMargin: 4
+                            anchors.rightMargin: 4
+                            radius: 4
+                            color: rowMouse.containsMouse ? "#434c5e" : "transparent"
+                        }
+
+                        Text {
+                            visible: !modelData.isSeparator
+                            anchors.fill: parent
+                            anchors.leftMargin: 12
+                            anchors.rightMargin: 12
+                            verticalAlignment: Text.AlignVCenter
+                            text: modelData.text || ""
+                            color: rowMouse.containsMouse ? "#88c0d0" : "#eceff4"
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pixelSize: 11
+                            elide: Text.ElideRight
+                        }
+
+                        MouseArea {
+                            id: rowMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            enabled: !modelData.isSeparator
+
+                            onClicked: {
+                                modelData.trigger();
+                                root.trayMenuOpen = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // 1. Collapsible System Tray Drawer
     RowLayout {
         id: traySection
@@ -112,13 +212,16 @@ RowLayout {
                             }
 
                             onClicked: mouse => {
-                                if (mouse.button === Qt.RightButton) {
+                                if (mouse.button === Qt.RightButton || trayDelegate.modelData.onlyMenu) {
                                     if (trayDelegate.modelData.hasMenu) {
-                                        trayDelegate.modelData.secondaryActivate();
+                                        root.activeTrayItem = trayDelegate.modelData;
+                                        root.activeTrayAnchor = trayDelegate;
+                                        root.trayMenuOpen = !root.trayMenuOpen;
                                     } else {
-                                        trayDelegate.modelData.activate();
+                                        trayDelegate.modelData.secondaryActivate();
                                     }
                                 } else {
+                                    root.trayMenuOpen = false;
                                     trayDelegate.modelData.activate();
                                 }
                             }

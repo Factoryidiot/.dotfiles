@@ -12,6 +12,11 @@ ShellRoot {
         id: appMenu
     }
 
+    // Native Desktop & System Notifications Server
+    Notifications {
+        id: notifications
+    }
+
     Variants {
         // Target internal laptop display (eDP), falling back to first screen if running standalone
         model: {

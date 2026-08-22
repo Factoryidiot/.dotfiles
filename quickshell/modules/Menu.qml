@@ -78,15 +78,8 @@ PanelWindow {
         function power(): void { menuWindow.open("system"); }
     }
 
-    Process {
-        id: cmdRunner
-        command: []
-        running: false
-    }
-
     function runCmd(cmd) {
-        cmdRunner.command = ["zsh", "-c", cmd];
-        cmdRunner.running = true;
+        Quickshell.execDetached(["zsh", "-c", cmd]);
         menuWindow.close();
     }
 

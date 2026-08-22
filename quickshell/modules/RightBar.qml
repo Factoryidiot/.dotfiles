@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import Quickshell
 import Quickshell.Io
 import Quickshell.Services.SystemTray
 import "../components"
@@ -12,14 +13,7 @@ RowLayout {
     property var bar: null
 
     function runCmd(cmd) {
-        cmdRunner.command = ["zsh", "-c", cmd];
-        cmdRunner.running = true;
-    }
-
-    Process {
-        id: cmdRunner
-        command: []
-        running: false
+        Quickshell.execDetached(["zsh", "-c", cmd]);
     }
 
     // 1. System Tray

@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import Quickshell.Io
+import Quickshell
 import "../components"
 
 RowLayout {
@@ -10,16 +10,8 @@ RowLayout {
     property var bar: null
     property var menu: null
 
-    // Helper process to execute commands asynchronously
     function runCmd(cmd) {
-        cmdRunner.command = ["zsh", "-c", cmd];
-        cmdRunner.running = true;
-    }
-
-    Process {
-        id: cmdRunner
-        command: []
-        running: false
+        Quickshell.execDetached(["zsh", "-c", cmd]);
     }
 
     // Launch Menu (NixOS / Menu icon)

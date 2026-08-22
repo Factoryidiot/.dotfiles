@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell.Io
 import Quickshell.Services.Pipewire
@@ -74,11 +75,28 @@ RowLayout {
                             trayDelegate.modelData.activate();
                         }
                     }
+                }
 
-                    ToolTip.visible: containsMouse && (trayDelegate.modelData.tooltip !== "" || trayDelegate.modelData.title !== "")
-                    ToolTip.text: trayDelegate.modelData.tooltip !== "" ? trayDelegate.modelData.tooltip : trayDelegate.modelData.title
-                    ToolTip.delay: 500
-                    ToolTip.timeout: 4000
+                ToolTip {
+                    id: trayToolTip
+                    visible: trayMouseArea.containsMouse && (trayDelegate.modelData.tooltip !== "" || trayDelegate.modelData.title !== "")
+                    text: trayDelegate.modelData.tooltip !== "" ? trayDelegate.modelData.tooltip : trayDelegate.modelData.title
+                    delay: 500
+                    timeout: 4000
+
+                    contentItem: Text {
+                        text: trayToolTip.text
+                        color: "#d8dee9"
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 11
+                    }
+
+                    background: Rectangle {
+                        color: "#2e3440"
+                        border.color: "#4c566a"
+                        border.width: 1
+                        radius: 4
+                    }
                 }
             }
         }

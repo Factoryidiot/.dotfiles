@@ -7,58 +7,66 @@ import "./modules"
 ShellRoot {
     id: root
 
-    PanelWindow {
-        id: barWindow
-        
-        // Anchors for a full top bar
-        anchors {
-            top: true
-            left: true
-            right: true
-        }
+    Variants {
+        model: Quickshell.screens
 
-        // Resolves the deprecated 'height' warning by using implicitHeight
-        implicitHeight: 26
-        color: "transparent"
+        delegate: Component {
+            PanelWindow {
+                id: barWindow
+                required property var modelData
+                screen: modelData
 
-        WlrLayershell.layer: WlrLayer.Top
-        WlrLayershell.namespace: "quickshell-bar"
+                // Anchors for a full top bar
+                anchors {
+                    top: true
+                    left: true
+                    right: true
+                }
 
-        Rectangle {
-            id: barBackground
-            anchors.fill: parent
-            color: "#2e3440"
+                // Resolves the deprecated 'height' warning by using implicitHeight
+                implicitHeight: 26
+                color: "transparent"
 
-            // Subtle separator line at bottom of bar
-            Rectangle {
-                anchors.bottom: parent.bottom
-                anchors.left: parent.left
-                anchors.right: parent.right
-                height: 1
-                color: "#3b4252"
-            }
+                WlrLayershell.layer: WlrLayer.Top
+                WlrLayershell.namespace: "quickshell-bar"
 
-            // Left Section (Menu, Idle Inhibitor, Weather)
-            LeftBar {
-                id: leftModules
-                anchors.left: parent.left
-                anchors.leftMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-            }
+                Rectangle {
+                    id: barBackground
+                    anchors.fill: parent
+                    color: "#2e3440"
 
-            // Center Section (Hyprland Workspaces)
-            CenterBar {
-                id: centerModules
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.verticalCenter: parent.verticalCenter
-            }
+                    // Subtle separator line at bottom of bar
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        height: 1
+                        color: "#3b4252"
+                    }
 
-            // Right Section (Bluetooth, Network, Audio, CPU, Battery, Clock)
-            RightBar {
-                id: rightModules
-                anchors.right: parent.right
-                anchors.rightMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
+                    // Left Section (Menu, Idle Inhibitor)
+                    LeftBar {
+                        id: leftModules
+                        anchors.left: parent.left
+                        anchors.leftMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    // Center Section (Hyprland Workspaces)
+                    CenterBar {
+                        id: centerModules
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+
+                    // Right Section (Tray, CPU, Bluetooth, Network, Audio, Battery, Weather, Clock)
+                    RightBar {
+                        id: rightModules
+                        anchors.right: parent.right
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
             }
         }
     }

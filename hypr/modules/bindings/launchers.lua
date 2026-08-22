@@ -10,7 +10,7 @@ hl.bind(mainMod .. " + F", hl.dsp.exec_cmd("launch-or-focus-tui yazi"), { desc =
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("uwsm-app -- firefox"), { desc = "Web browser" })
 
 -- [Flatpak]
-hl.bind(mainMod .. " + P", hl.dsp.exec_cmd([[launch-or-focus ^bitwarden$ "uwsm-app -- bitwarden.desktop -disable-gpu --enable-wayland-ime"]]), { desc = "Password manager" })
+hl.bind(mainMod .. " + P", hl.dsp.exec_cmd([[launch-or-focus ^bitwarden$ "uwsm-app -- bitwarden --disable-gpu --enable-wayland-ime"]]), { desc = "Password manager" })
 hl.bind(mainMod .. " + N", hl.dsp.exec_cmd([[launch-or-focus ^obsidian$ "uwsm-app -- flatpak run md.obsidian.Obsidian -disable-gpu --enable-wayland-ime"]]), { desc = "Notes" })
 
 -- [Webapps]

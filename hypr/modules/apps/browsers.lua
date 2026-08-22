@@ -4,8 +4,10 @@
 
 -- Security hardening & layout for Bitwarden
 hl.window_rule({
-  match = { class = "^(Bitwarden)$" },
-  tag = "+floating-window",
+  match = { class = "^([bB]itwarden)$" },
+  float = true,
+  center = true,
+  size = { 875, 750 },
   no_screen_share = true
 })
 

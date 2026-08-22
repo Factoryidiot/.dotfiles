@@ -11,7 +11,7 @@ hl.window_rule({
 -- 1. Floating Windows Configuration & Custom Tagging
 hl.window_rule({
     match = { 
-        class = "dot.nix.manage-vms|dot.nix.display-keybindings|dot.nix.bluetui|dot.nix.impala|dot.nix.wiremix|dot.nix.btop|dot.nix.terminal|dot.nix.yazi|org.gnome.NautilusPreviewer|dot.nix.Evince|com.gabm.satty|Whio|About|TUI.float|imv|mpv|dot.nix.install-vm" 
+        class = "dot.nix.manage-vms|dot.nix.display-keybindings|dot.nix.btop|dot.nix.terminal|dot.nix.yazi|org.gnome.NautilusPreviewer|dot.nix.Evince|com.gabm.satty|Whio|About|TUI.float|imv|mpv|dot.nix.install-vm" 
     },
     tag = "+floating-window"
 })
@@ -39,6 +39,13 @@ hl.window_rule({
     float = true,
     center = true,
     size = { 955, 525 }
+})
+
+hl.window_rule({
+    match = { class = "dot.nix.impala|dot.nix.bluetui|dot.nix.wiremix" },
+    float = true,
+    center = true,
+    size = { 650, 600 }
 })
 
 hl.window_rule({

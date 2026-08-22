@@ -16,73 +16,112 @@ RowLayout {
         Quickshell.execDetached(["zsh", "-c", cmd]);
     }
 
-    // 1. System Tray
+    // 1. Collapsible System Tray Drawer
     RowLayout {
-        id: trayRow
-        spacing: 4
+        id: traySection
+        spacing: 2
         visible: SystemTray.items.values.length > 0
 
-        Repeater {
-            model: SystemTray.items.values
-            delegate: Item {
-                id: trayDelegate
-                required property SystemTrayItem modelData
+        property bool isExpanded: false
 
-                implicitWidth: 20
-                implicitHeight: 24
+        // Toggle Drawer Chevron Button
+        IconButton {
+            id: trayToggleBtn
+            iconText: traySection.isExpanded ? "" : ""
+            color: "#81a1c1"
+            tooltipText: traySection.isExpanded ? "Hide system tray" : `Show system tray (${SystemTray.items.values.length})`
+            paddingHorizontal: 2
+            paddingVertical: 2
 
-                Rectangle {
-                    id: trayBg
-                    anchors.fill: parent
-                    radius: 3
-                    color: "#434c5e"
-                    opacity: trayMouseArea.containsMouse ? 0.4 : 0.0
-                    visible: trayMouseArea.containsMouse
+            onClicked: {
+                traySection.isExpanded = !traySection.isExpanded;
+            }
+        }
 
-                    Behavior on opacity {
-                        NumberAnimation { duration: 120 }
-                    }
+        // Sliding Clip Container for Tray Icons
+        Item {
+            id: trayClip
+            implicitHeight: 24
+            implicitWidth: traySection.isExpanded ? trayRow.implicitWidth : 0
+            clip: true
+
+            Behavior on implicitWidth {
+                NumberAnimation {
+                    duration: 220
+                    easing.type: Easing.OutCubic
                 }
+            }
 
-                Image {
-                    anchors.centerIn: parent
-                    width: 14
-                    height: 14
-                    source: trayDelegate.modelData.icon
-                    fillMode: Image.PreserveAspectFit
-                }
+            RowLayout {
+                id: trayRow
+                spacing: 4
+                anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
 
-                MouseArea {
-                    id: trayMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    acceptedButtons: Qt.LeftButton | Qt.RightButton
-                    cursorShape: Qt.PointingHandCursor
+                Repeater {
+                    model: SystemTray.items.values
+                    delegate: Item {
+                        id: trayDelegate
+                        required property SystemTrayItem modelData
 
-                    onEntered: {
-                        var text = trayDelegate.modelData.tooltip !== "" ? trayDelegate.modelData.tooltip : trayDelegate.modelData.title;
-                        var b = root.bar;
-                        if (b && text !== "") {
-                            b.showTooltip(trayDelegate, text);
-                        }
-                    }
+                        implicitWidth: 20
+                        implicitHeight: 24
 
-                    onExited: {
-                        var b = root.bar;
-                        if (b) {
-                            b.hideTooltip(trayDelegate);
-                        }
-                    }
+                        Rectangle {
+                            id: trayBg
+                            anchors.fill: parent
+                            radius: 3
+                            color: "#434c5e"
+                            opacity: trayMouseArea.containsMouse ? 0.4 : 0.0
+                            visible: trayMouseArea.containsMouse
 
-                    onClicked: mouse => {
-                        if (mouse.button === Qt.RightButton) {
-                            if (trayDelegate.modelData.hasMenu) {
-                                trayDelegate.modelData.secondaryActivate();
-                            } else {
-                                trayDelegate.modelData.activate();
+                            Behavior on opacity {
+                                NumberAnimation { duration: 120 }
                             }
-                        } else {
-                            trayDelegate.modelData.activate();
+                        }
+
+                        Image {
+                            anchors.centerIn: parent
+                            width: 14
+                            height: 14
+                            source: trayDelegate.modelData.icon
+                            sourceSize: Qt.size(14, 14)
+                            fillMode: Image.PreserveAspectFit
+                        }
+
+                        MouseArea {
+                            id: trayMouseArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            cursorShape: Qt.PointingHandCursor
+
+                            onEntered: {
+                                var text = trayDelegate.modelData.tooltip !== "" ? trayDelegate.modelData.tooltip : trayDelegate.modelData.title;
+                                var b = root.bar;
+                                if (b && text !== "") {
+                                    b.showTooltip(trayDelegate, text);
+                                }
+                            }
+
+                            onExited: {
+                                var b = root.bar;
+                                if (b) {
+                                    b.hideTooltip(trayDelegate);
+                                }
+                            }
+
+                            onClicked: mouse => {
+                                if (mouse.button === Qt.RightButton) {
+                                    if (trayDelegate.modelData.hasMenu) {
+                                        trayDelegate.modelData.secondaryActivate();
+                                    } else {
+                                        trayDelegate.modelData.activate();
+                                    }
+                                } else {
+                                    trayDelegate.modelData.activate();
+                                }
+                            }
                         }
                     }
                 }

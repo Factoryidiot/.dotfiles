@@ -1,10 +1,10 @@
 #!/usr/bin/env zsh
 
 APP_CLASS="dot.nix.$(basename $1)"
-if command -v xdg-terminal-exec &>/dev/null; then
+if command -v ghostty &>/dev/null; then
+  exec setsid uwsm-app -- ghostty --class="$APP_CLASS" --confirm-close-surface=false -e "$@"
+elif command -v xdg-terminal-exec &>/dev/null; then
   exec setsid uwsm-app -- xdg-terminal-exec --app-id="$APP_CLASS" -- "$@"
-elif command -v ghostty &>/dev/null; then
-  exec setsid uwsm-app -- ghostty --class="$APP_CLASS" -e "$@"
 elif command -v alacritty &>/dev/null; then
   exec setsid uwsm-app -- alacritty --class "$APP_CLASS" -e "$@"
 fi

@@ -67,14 +67,16 @@ RowLayout {
 
                     onEntered: {
                         var text = trayDelegate.modelData.tooltip !== "" ? trayDelegate.modelData.tooltip : trayDelegate.modelData.title;
-                        if (trayDelegate.Window.window && trayDelegate.Window.window.showTooltip && text !== "") {
-                            trayDelegate.Window.window.showTooltip(trayDelegate, text);
+                        var b = root.bar;
+                        if (b && text !== "") {
+                            b.showTooltip(trayDelegate, text);
                         }
                     }
 
                     onExited: {
-                        if (trayDelegate.Window.window && trayDelegate.Window.window.hideTooltip) {
-                            trayDelegate.Window.window.hideTooltip(trayDelegate);
+                        var b = root.bar;
+                        if (b) {
+                            b.hideTooltip(trayDelegate);
                         }
                     }
 
@@ -98,7 +100,7 @@ RowLayout {
     IconButton {
         iconText: "󰍛"
         color: "#d8dee9"
-        tooltipText: "Resource Monitor (Click: btop)"
+        tooltipText: "Resource Monitor (btop)"
         paddingHorizontal: 3
 
         onClicked: root.runCmd("launch-or-focus-tui btop")
@@ -122,13 +124,13 @@ RowLayout {
                     let out = this.text.trim();
                     if (out === "connected") {
                         btModule.btIcon = "󰂱";
-                        btModule.btTooltip = "Bluetooth: Connected\nClick: Bluetooth Manager (bluetui)";
+                        btModule.btTooltip = "Bluetooth: Connected";
                     } else if (out === "on") {
                         btModule.btIcon = "";
-                        btModule.btTooltip = "Bluetooth: Enabled\nClick: Bluetooth Manager (bluetui)";
+                        btModule.btTooltip = "Bluetooth: Enabled";
                     } else {
                         btModule.btIcon = "󰂲";
-                        btModule.btTooltip = "Bluetooth: Disabled\nClick: Bluetooth Manager (bluetui)";
+                        btModule.btTooltip = "Bluetooth: Disabled";
                     }
                 }
             }
@@ -199,7 +201,7 @@ RowLayout {
                     let out = this.text.trim();
                     if (out.startsWith("ethernet")) {
                         netModule.netIcon = "󰀂";
-                        netModule.netTooltip = "Ethernet Connected\nClick: WiFi Manager (impala)";
+                        netModule.netTooltip = "Ethernet Connected";
                     } else if (out.startsWith("wifi")) {
                         let parts = out.split(":");
                         let ssid = parts[1] || "WiFi";
@@ -208,7 +210,6 @@ RowLayout {
                         // Handle RSSI (dBm, negative) or percentage (0-100)
                         let percent = 70;
                         if (val < 0) {
-                            // Convert dBm (-100 to -50) to percentage
                             percent = Math.min(100, Math.max(0, Math.round(2 * (val + 100))));
                         } else {
                             percent = val;
@@ -220,10 +221,10 @@ RowLayout {
                         else if (percent >= 20) netModule.netIcon = "󰤟";
                         else netModule.netIcon = "󰤯";
 
-                        netModule.netTooltip = `WiFi: ${ssid} (${percent}%)\nClick: WiFi Manager (impala)`;
+                        netModule.netTooltip = `WiFi: ${ssid} (${percent}%)`;
                     } else {
                         netModule.netIcon = "󰤮";
-                        netModule.netTooltip = "Network Disconnected\nClick: WiFi Manager (impala)";
+                        netModule.netTooltip = "Network Disconnected";
                     }
                 }
             }
@@ -291,7 +292,7 @@ RowLayout {
             id: audioBtn
             iconText: audioModule.getAudioIcon()
             color: audioModule.isMuted ? "#bf616a" : "#d8dee9"
-            tooltipText: `Volume: ${audioModule.volumePercent}%${audioModule.isMuted ? " (Muted)" : ""}\nClick: Audio Mixer (wiremix)\nScroll: Volume Up/Down\nRight-click: Mute Toggle`
+            tooltipText: `Volume: ${audioModule.volumePercent}%${audioModule.isMuted ? " (Muted)" : ""}`
             paddingHorizontal: 3
 
             onClicked: root.runCmd("launch-or-focus-tui wiremix")
@@ -361,7 +362,6 @@ RowLayout {
 
             if (isPluggedIn) {
                 if (fullOrHeld) {
-                    // Plugged in at charge limit / full
                     return "";
                 }
                 if (charging) {
@@ -393,14 +393,14 @@ RowLayout {
         function getTooltipText() {
             if (isPluggedIn) {
                 if (status === "Not charging") {
-                    return `Power: Plugged In (${capacity}%, Charge Threshold Active)\nClick: Power Menu\nRight-click: Detailed Status`;
+                    return `Power: Plugged In (${capacity}%, Charge Limit Active)`;
                 } else if (status === "Charging") {
-                    return `Power: Charging (${capacity}%)\nClick: Power Menu\nRight-click: Detailed Status`;
+                    return `Power: Charging (${capacity}%)`;
                 } else {
-                    return `Power: Plugged In (${capacity}%)\nClick: Power Menu\nRight-click: Detailed Status`;
+                    return `Power: Plugged In (${capacity}%)`;
                 }
             } else {
-                return `Battery: ${capacity}% (${status})\nClick: Power Menu\nRight-click: Detailed Status`;
+                return `Battery: ${capacity}% (${status})`;
             }
         }
 
@@ -453,7 +453,7 @@ RowLayout {
             id: weatherBtn
             iconText: weatherModule.weatherIcon
             color: "#d8dee9"
-            tooltipText: `${weatherModule.weatherTooltip}\nClick: Refresh | Right-click: Weather Report`
+            tooltipText: weatherModule.weatherTooltip
             paddingHorizontal: 3
 
             onClicked: weatherProc.running = true
@@ -490,7 +490,7 @@ RowLayout {
             id: clockBtn
             text: clockModule.getClockText()
             color: "#d8dee9"
-            tooltipText: "Left-click: Toggle Date Format\nRight-click: Timezone Select"
+            tooltipText: clockModule.showAltFormat ? Qt.formatDateTime(clockModule.dateObj, "dddd HH:mm") : Qt.formatDateTime(clockModule.dateObj, "dd MMMM yyyy")
             paddingHorizontal: 5
 
             onClicked: clockModule.showAltFormat = !clockModule.showAltFormat

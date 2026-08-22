@@ -28,8 +28,12 @@ PanelWindow {
     }
 
     function toggle(category) {
-        if (isOpen) close();
-        else open(category);
+        var targetCat = category || "root";
+        if (isOpen && activeCategory === targetCat) {
+            close();
+        } else {
+            open(targetCat);
+        }
     }
 
     function drillDown(categoryId) {
@@ -71,11 +75,11 @@ PanelWindow {
         function toggle(): void { menuWindow.toggle("root"); }
         function open(): void { menuWindow.open("root"); }
         function close(): void { menuWindow.close(); }
-        function apps(): void { menuWindow.open("apps"); }
-        function actions(): void { menuWindow.open("actions"); }
-        function setup(): void { menuWindow.open("setup"); }
-        function help(): void { menuWindow.open("help"); }
-        function power(): void { menuWindow.open("system"); }
+        function apps(): void { menuWindow.toggle("apps"); }
+        function actions(): void { menuWindow.toggle("actions"); }
+        function setup(): void { menuWindow.toggle("setup"); }
+        function help(): void { menuWindow.toggle("help"); }
+        function power(): void { menuWindow.toggle("system"); }
     }
 
     function runCmd(cmd) {

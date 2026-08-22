@@ -9,6 +9,8 @@ RowLayout {
     id: root
     spacing: 8
 
+    property var bar: null
+
     function runCmd(cmd) {
         cmdRunner.command = ["zsh", "-c", cmd];
         cmdRunner.running = true;

@@ -18,14 +18,14 @@ ShellRoot {
 
                 property string tooltipText: ""
                 property var tooltipTarget: null
-                property bool tooltipVisible: false
+                property bool tooltipShown: false
 
                 Timer {
-                    id: tooltipDelayTimer
+                    id: tooltipTimer
                     interval: 300
                     onTriggered: {
                         if (barWindow.tooltipTarget && barWindow.tooltipText !== "") {
-                            barWindow.tooltipVisible = true;
+                            barWindow.tooltipShown = true;
                         }
                     }
                 }
@@ -34,13 +34,13 @@ ShellRoot {
                     if (!text || text === "") return;
                     barWindow.tooltipText = text;
                     barWindow.tooltipTarget = target;
-                    tooltipDelayTimer.restart();
+                    tooltipTimer.restart();
                 }
 
                 function hideTooltip(target) {
                     if (barWindow.tooltipTarget === target) {
-                        tooltipDelayTimer.stop();
-                        barWindow.tooltipVisible = false;
+                        tooltipTimer.stop();
+                        barWindow.tooltipShown = false;
                         barWindow.tooltipTarget = null;
                         barWindow.tooltipText = "";
                     }
@@ -76,6 +76,7 @@ ShellRoot {
                     // Left Section (Menu, Idle Inhibitor)
                     LeftBar {
                         id: leftModules
+                        bar: barWindow
                         anchors.left: parent.left
                         anchors.leftMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
@@ -91,6 +92,7 @@ ShellRoot {
                     // Right Section (Tray, CPU, Bluetooth, Network, Audio, Battery, Weather, Clock)
                     RightBar {
                         id: rightModules
+                        bar: barWindow
                         anchors.right: parent.right
                         anchors.rightMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
@@ -98,13 +100,14 @@ ShellRoot {
                 }
 
                 PopupWindow {
-                    id: tooltipPopup
-                    visible: barWindow.tooltipVisible && barWindow.tooltipTarget !== null && barWindow.tooltipText !== ""
+                    id: tooltipWindow
+                    visible: barWindow.tooltipShown && barWindow.tooltipTarget !== null && barWindow.tooltipText !== ""
                     color: "transparent"
-                    implicitWidth: Math.ceil(tooltipBox.implicitWidth)
-                    implicitHeight: Math.ceil(tooltipBox.implicitHeight)
+                    implicitWidth: Math.ceil(tooltipBubble.implicitWidth)
+                    implicitHeight: Math.ceil(tooltipBubble.implicitHeight)
 
                     anchor {
+                        id: tooltipAnchor
                         window: barWindow
                         adjustment: PopupAdjustment.Slide
                         edges: Edges.Top | Edges.Left
@@ -113,19 +116,19 @@ ShellRoot {
                         rect.height: 1
 
                         onAnchoring: {
-                            if (!barWindow.tooltipTarget) return;
                             var target = barWindow.tooltipTarget;
-                            var popupWidth = tooltipPopup.implicitWidth;
+                            if (!target) return;
+                            var popupWidth = tooltipWindow.implicitWidth;
                             var localX = (target.width / 2) - (popupWidth / 2);
                             var localY = target.height + 6;
                             var point = barWindow.contentItem.mapFromItem(target, localX, localY);
-                            anchor.rect.x = Math.round(point.x);
-                            anchor.rect.y = Math.round(point.y);
+                            tooltipAnchor.rect.x = Math.round(point.x);
+                            tooltipAnchor.rect.y = Math.round(point.y);
                         }
                     }
 
                     Rectangle {
-                        id: tooltipBox
+                        id: tooltipBubble
                         implicitWidth: tooltipLabel.implicitWidth + 16
                         implicitHeight: tooltipLabel.implicitHeight + 10
                         color: "#2e3440"

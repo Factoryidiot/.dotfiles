@@ -3,6 +3,7 @@ import QtQuick
 Item {
     id: root
 
+    property var bar: null
     property string text: ""
     property string iconText: ""
     property color color: "#d8dee9"
@@ -19,6 +20,17 @@ Item {
     signal rightClicked()
     signal scrollUp()
     signal scrollDown()
+
+    function getBar() {
+        if (root.bar) return root.bar;
+        var p = root.parent;
+        while (p) {
+            if (p.bar) return p.bar;
+            if (p.showTooltip) return p;
+            p = p.parent;
+        }
+        return null;
+    }
 
     implicitWidth: contentRow.implicitWidth + (paddingHorizontal * 2)
     implicitHeight: 24
@@ -70,14 +82,16 @@ Item {
         cursorShape: Qt.PointingHandCursor
 
         onEntered: {
-            if (root.Window.window && root.Window.window.showTooltip && root.tooltipText !== "") {
-                root.Window.window.showTooltip(root, root.tooltipText);
+            var b = root.getBar();
+            if (b && root.tooltipText !== "") {
+                b.showTooltip(root, root.tooltipText);
             }
         }
 
         onExited: {
-            if (root.Window.window && root.Window.window.hideTooltip) {
-                root.Window.window.hideTooltip(root);
+            var b = root.getBar();
+            if (b) {
+                b.hideTooltip(root);
             }
         }
 

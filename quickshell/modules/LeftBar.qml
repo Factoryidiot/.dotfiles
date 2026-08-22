@@ -7,6 +7,8 @@ RowLayout {
     id: root
     spacing: 8
 
+    property var bar: null
+
     // Helper process to execute commands asynchronously
     function runCmd(cmd) {
         cmdRunner.command = ["zsh", "-c", cmd];

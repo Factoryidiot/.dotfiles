@@ -63,6 +63,19 @@ RowLayout {
                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                     cursorShape: Qt.PointingHandCursor
 
+                    onEntered: {
+                        var text = trayDelegate.modelData.tooltip !== "" ? trayDelegate.modelData.tooltip : trayDelegate.modelData.title;
+                        if (trayDelegate.Window.window && trayDelegate.Window.window.showTooltip && text !== "") {
+                            trayDelegate.Window.window.showTooltip(trayDelegate, text);
+                        }
+                    }
+
+                    onExited: {
+                        if (trayDelegate.Window.window && trayDelegate.Window.window.hideTooltip) {
+                            trayDelegate.Window.window.hideTooltip(trayDelegate);
+                        }
+                    }
+
                     onClicked: mouse => {
                         if (mouse.button === Qt.RightButton) {
                             if (trayDelegate.modelData.hasMenu) {
@@ -73,29 +86,6 @@ RowLayout {
                         } else {
                             trayDelegate.modelData.activate();
                         }
-                    }
-                }
-
-                ToolTip {
-                    id: trayToolTip
-                    visible: trayMouseArea.containsMouse && (trayDelegate.modelData.tooltip !== "" || trayDelegate.modelData.title !== "")
-                    text: trayDelegate.modelData.tooltip !== "" ? trayDelegate.modelData.tooltip : trayDelegate.modelData.title
-                    delay: 400
-                    timeout: 4000
-                    y: parent.height + 6
-
-                    contentItem: Text {
-                        text: trayToolTip.text
-                        color: "#d8dee9"
-                        font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 11
-                    }
-
-                    background: Rectangle {
-                        color: "#2e3440"
-                        border.color: "#4c566a"
-                        border.width: 1
-                        radius: 4
                     }
                 }
             }

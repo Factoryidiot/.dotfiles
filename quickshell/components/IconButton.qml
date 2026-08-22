@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls
 
 Item {
     id: root
@@ -70,6 +69,18 @@ Item {
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         cursorShape: Qt.PointingHandCursor
 
+        onEntered: {
+            if (root.Window.window && root.Window.window.showTooltip && root.tooltipText !== "") {
+                root.Window.window.showTooltip(root, root.tooltipText);
+            }
+        }
+
+        onExited: {
+            if (root.Window.window && root.Window.window.hideTooltip) {
+                root.Window.window.hideTooltip(root);
+            }
+        }
+
         onClicked: mouse => {
             if (mouse.button === Qt.RightButton) {
                 root.rightClicked();
@@ -84,29 +95,6 @@ Item {
             } else if (wheel.angleDelta.y < 0) {
                 root.scrollDown();
             }
-        }
-    }
-
-    ToolTip {
-        id: toolTip
-        visible: mouseArea.containsMouse && root.tooltipText !== ""
-        text: root.tooltipText
-        delay: 400
-        timeout: 4000
-        y: root.height + 6
-
-        contentItem: Text {
-            text: toolTip.text
-            color: "#d8dee9"
-            font.family: "JetBrainsMono Nerd Font"
-            font.pixelSize: 11
-        }
-
-        background: Rectangle {
-            color: "#2e3440"
-            border.color: "#4c566a"
-            border.width: 1
-            radius: 4
         }
     }
 }

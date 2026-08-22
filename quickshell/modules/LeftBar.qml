@@ -26,7 +26,7 @@ RowLayout {
     IconButton {
         iconText: ""
         color: "#88c0d0"
-        tooltipText: "Menu (Super + Space)\nRight-click: Terminal"
+        tooltipText: "Launcher (Super + Space)\nRight-click: Terminal"
         paddingHorizontal: 6
 
         onClicked: {

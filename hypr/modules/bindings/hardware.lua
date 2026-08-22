@@ -28,5 +28,5 @@ hl.bind("XF86AudioPause", hl.dsp.exec_cmd(osdclient .. " --playerctl play-pause"
 hl.bind("XF86AudioPlay", hl.dsp.exec_cmd(osdclient .. " --playerctl play-pause"), { locked = true, desc = "Play" })
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd(osdclient .. " --playerctl previous"), { locked = true, desc = "Previous track" })
 
--- Caps Lock (using your verified working pattern)
-hl.bind("CAPS + Caps_Lock", hl.dsp.exec_cmd(osdclient .. " --caps-lock"), { locked = true, desc = "Caps lock" })
+-- Caps Lock (accurate LED hardware state)
+hl.bind("CAPS + Caps_Lock", hl.dsp.exec_cmd("cmd-caps-lock"), { locked = true, desc = "Caps lock" })

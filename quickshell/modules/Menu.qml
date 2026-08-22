@@ -282,14 +282,14 @@ PanelWindow {
             anchors.margins: 8
             spacing: 6
 
-            // Header: Breadcrumb Path & Search Bar
+            // Header: Breadcrumb Path (only visible when in a submenu)
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 6
+                visible: menuWindow.activeCategory !== "root" && searchInput.text.length === 0
 
                 // Back Button (shown if in submenu)
                 Rectangle {
-                    visible: menuWindow.activeCategory !== "root" && searchInput.text.length === 0
                     width: 24
                     height: 24
                     radius: 4

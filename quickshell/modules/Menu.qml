@@ -72,6 +72,9 @@ PanelWindow {
         function open(): void { menuWindow.open("root"); }
         function close(): void { menuWindow.close(); }
         function apps(): void { menuWindow.open("apps"); }
+        function actions(): void { menuWindow.open("actions"); }
+        function setup(): void { menuWindow.open("setup"); }
+        function help(): void { menuWindow.open("help"); }
         function power(): void { menuWindow.open("system"); }
     }
 
@@ -89,13 +92,52 @@ PanelWindow {
 
     // Root Categories
     readonly property var rootCategories: [
-        { id: "apps", name: "Applications", glyph: "󰀻", isCategory: true },
-        { id: "system", name: "Power & Session", glyph: "", isCategory: true }
+        { id: "apps", name: "Apps", glyph: "󰀻", isCategory: true },
+        { id: "actions", name: "Actions", glyph: "󱓞", isCategory: true },
+        { id: "setup", name: "Setup", glyph: "", isCategory: true },
+        { id: "vms", name: "Virtual Machines", glyph: "", exec: "xdg-terminal-exec --app-id=dot.nix.manage-vms manage-vm" },
+        { id: "webapp", name: "Web App", glyph: "", exec: "xdg-terminal-exec --app-id=dot.nix.install-webapp install-webapp" },
+        { id: "help", name: "Help", glyph: "󰧑", isCategory: true },
+        { id: "system", name: "System", glyph: "", isCategory: true }
     ]
 
-    // System Actions
+    // Actions Submenu
+    readonly property var actionItems: [
+        { id: "act-screenshot", name: "Screenshot (Interactive)", glyph: "", exec: "cmd-screenshot smart" },
+        { id: "act-screenshot-clip", name: "Screenshot (To Clipboard)", glyph: "", exec: "cmd-screenshot smart clipboard" },
+        { id: "act-colorpicker", name: "Color Picker (Hyprpicker)", glyph: "󰃉", exec: "pkill hyprpicker || hyprpicker -a" },
+        { id: "act-share-clip", name: "Share Clipboard", glyph: "", exec: "cmd-share clipboard" },
+        { id: "act-share-file", name: "Share File", glyph: "", exec: "xdg-terminal-exec --app-id=dot.nix.terminal bash -c 'cmd-share file'" },
+        { id: "act-toggle-screensaver", name: "Toggle Screensaver", glyph: "󱄄", exec: "toggle-screensaver" },
+        { id: "act-toggle-nightlight", name: "Toggle Nightlight", glyph: "󰔎", exec: "toggle-nightlight" },
+        { id: "act-toggle-idle", name: "Toggle Idle Lock", glyph: "󱫖", exec: "toggle-idle" }
+    ]
+
+    // Setup & Settings Submenu
+    readonly property var setupItems: [
+        { id: "setup-audio", name: "Audio (wiremix)", glyph: "", exec: "launch-or-focus-tui wiremix" },
+        { id: "setup-wifi", name: "WiFi (impala)", glyph: "", exec: "launch-wifi" },
+        { id: "setup-bluetooth", name: "Bluetooth (bluetui)", glyph: "󰂯", exec: "launch-bluetooth" },
+        { id: "setup-monitors", name: "Monitors", glyph: "󰍹", exec: "launch-editor ~/.dotfiles/hypr/modules/monitors.lua" },
+        { id: "setup-keybindings", name: "Keybindings", glyph: "", exec: "launch-editor ~/.dotfiles/hypr/modules/keybindings.lua" },
+        { id: "setup-wallpaper", name: "Wallpaper (waypaper)", glyph: "", exec: "waypaper" },
+        { id: "setup-weather-report", name: "Weather Report", glyph: "", exec: "launch-weather-report" }
+    ]
+
+    // Help & Docs Submenu
+    readonly property var helpItems: [
+        { id: "help-keybindings", name: "Keybindings Reference", glyph: "", exec: "launch-or-focus-tui display-keybindings" },
+        { id: "help-homemanager", name: "Home-Manager Options", glyph: "", exec: "launch-webapp 'https://home-manager-options.extranix.com/'" },
+        { id: "help-hyprland", name: "Hyprland Wiki", glyph: "", exec: "launch-webapp 'https://wiki.hypr.land/'" },
+        { id: "help-neovim", name: "Neovim Keymaps", glyph: "", exec: "launch-webapp 'https://www.lazyvim.org/keymaps'" },
+        { id: "help-nixos", name: "NixOS Wiki", glyph: "", exec: "launch-webapp 'https://wiki.nixos.org/wiki/NixOS_Wiki'" },
+        { id: "help-zsh", name: "Zsh / Shell Hints", glyph: "󱆃", exec: "launch-webapp 'https://devhints.io/bash'" }
+    ]
+
+    // Power & Session Submenu
     readonly property var systemActions: [
-        { id: "action-lock", name: "Lock Screen", glyph: "", exec: "hyprlock" },
+        { id: "action-lock", name: "Lock", glyph: "", exec: "hyprlock" },
+        { id: "action-screensaver", name: "Screensaver (Force)", glyph: "󱄄", exec: "launch-screensaver force" },
         { id: "action-suspend", name: "Suspend", glyph: "󰒲", exec: "systemctl suspend" },
         { id: "action-reboot", name: "Reboot", glyph: "󰜉", exec: "systemctl reboot" },
         { id: "action-shutdown", name: "Shutdown", glyph: "󰐥", exec: "systemctl poweroff" },
@@ -104,8 +146,11 @@ PanelWindow {
 
     function getBreadcrumbTitle() {
         if (searchInput.text.trim().length > 0) return "Search";
-        if (activeCategory === "apps") return "Applications";
-        if (activeCategory === "system") return "Power & Session";
+        if (activeCategory === "apps") return "Apps";
+        if (activeCategory === "actions") return "Actions";
+        if (activeCategory === "setup") return "Setup";
+        if (activeCategory === "help") return "Help";
+        if (activeCategory === "system") return "System";
         return "Menu";
     }
 
@@ -113,12 +158,16 @@ PanelWindow {
         var query = searchInput.text.trim().toLowerCase();
         var results = [];
 
-        // 1. Search Mode: Match across applications & system actions
+        // 1. Search Mode: Match across all actions, setup items, help docs, and desktop applications
         if (query.length > 0) {
-            for (var s = 0; s < systemActions.length; s++) {
-                var sys = systemActions[s];
-                if (sys.name.toLowerCase().includes(query)) {
-                    results.push({ isApp: false, isCategory: false, name: sys.name, glyph: sys.glyph, icon: "", exec: sys.exec });
+            var pools = [actionItems, setupItems, helpItems, systemActions];
+            for (var p = 0; p < pools.length; p++) {
+                var pool = pools[p];
+                for (var i = 0; i < pool.length; i++) {
+                    var item = pool[i];
+                    if (item.name.toLowerCase().includes(query)) {
+                        results.push({ isApp: false, isCategory: false, name: item.name, glyph: item.glyph, icon: "", exec: item.exec });
+                    }
                 }
             }
             if (DesktopEntries && DesktopEntries.applications) {
@@ -140,7 +189,31 @@ PanelWindow {
         if (activeCategory === "root") {
             for (var r = 0; r < rootCategories.length; r++) {
                 var cat = rootCategories[r];
-                results.push({ isApp: false, isCategory: true, id: cat.id, name: cat.name, glyph: cat.glyph, icon: "" });
+                results.push({ isApp: false, isCategory: cat.isCategory === true, id: cat.id, name: cat.name, glyph: cat.glyph, icon: "", exec: cat.exec || "" });
+            }
+            return results;
+        }
+
+        if (activeCategory === "actions") {
+            for (var a1 = 0; a1 < actionItems.length; a1++) {
+                var act = actionItems[a1];
+                results.push({ isApp: false, isCategory: false, name: act.name, glyph: act.glyph, icon: "", exec: act.exec });
+            }
+            return results;
+        }
+
+        if (activeCategory === "setup") {
+            for (var s1 = 0; s1 < setupItems.length; s1++) {
+                var st = setupItems[s1];
+                results.push({ isApp: false, isCategory: false, name: st.name, glyph: st.glyph, icon: "", exec: st.exec });
+            }
+            return results;
+        }
+
+        if (activeCategory === "help") {
+            for (var h1 = 0; h1 < helpItems.length; h1++) {
+                var hl = helpItems[h1];
+                results.push({ isApp: false, isCategory: false, name: hl.name, glyph: hl.glyph, icon: "", exec: hl.exec });
             }
             return results;
         }
@@ -285,7 +358,7 @@ PanelWindow {
 
                         Text {
                             anchors.fill: parent
-                            text: menuWindow.activeCategory === "root" ? "Search applications & actions..." : `Filter ${menuWindow.getBreadcrumbTitle()}...`
+                            text: menuWindow.activeCategory === "root" ? "Search..." : `Filter ${menuWindow.getBreadcrumbTitle()}...`
                             color: "#d8dee9"
                             opacity: 0.4
                             font.family: searchInput.font.family
@@ -378,7 +451,7 @@ PanelWindow {
                             }
                         }
 
-                        // Label (single line, no subtext!)
+                        // Label (single line, clean typography)
                         Text {
                             text: modelData.name
                             color: index === menuWindow.searchIndex ? "#88c0d0" : "#eceff4"

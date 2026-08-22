@@ -52,7 +52,6 @@ PanelWindow {
         }
     }
 
-    // Full screen overlay for backdrop dismiss
     anchors {
         top: true
         bottom: true
@@ -74,10 +73,8 @@ PanelWindow {
         function close(): void { menuWindow.close(); }
         function apps(): void { menuWindow.open("apps"); }
         function power(): void { menuWindow.open("system"); }
-        function tools(): void { menuWindow.open("tools"); }
     }
 
-    // Helper process to execute commands asynchronously
     Process {
         id: cmdRunner
         command: []
@@ -92,25 +89,13 @@ PanelWindow {
 
     // Top-Level Categories
     readonly property var rootCategories: [
-        { id: "apps", name: "Applications", comment: "Browse all installed desktop applications", icon: "applications-other", isCategory: true },
-        { id: "tools", name: "System Tools & TUIs", comment: "Task managers, mixers, wifi and bluetooth utilities", icon: "utilities-system-monitor", isCategory: true },
+        { id: "apps", name: "Applications", comment: "Browse installed desktop applications", icon: "applications-other", isCategory: true },
         { id: "system", name: "Power & Session", comment: "Lock, suspend, reboot, shutdown, and logout", icon: "system-shutdown", isCategory: true }
-    ]
-
-    // System Tools & TUIs
-    readonly property var toolActions: [
-        { id: "action-terminal", name: "Terminal", comment: "Ghostty GPU-accelerated terminal", icon: "utilities-terminal", exec: "xdg-terminal-exec", category: "Tools" },
-        { id: "action-btop", name: "Resource Monitor (btop)", comment: "Interactive process viewer and hardware stats", icon: "utilities-system-monitor", exec: "launch-or-focus-tui btop", category: "Tools" },
-        { id: "action-wiremix", name: "Audio Mixer (wiremix)", comment: "PipeWire sound and stream volume controls", icon: "audio-card", exec: "launch-or-focus-tui wiremix", category: "Tools" },
-        { id: "action-bluetui", name: "Bluetooth Manager (bluetui)", comment: "Manage paired and connected Bluetooth devices", icon: "bluetooth", exec: "launch-or-focus-tui bluetui", category: "Tools" },
-        { id: "action-impala", name: "WiFi Manager (impala)", comment: "Scan, connect, and configure wireless networks", icon: "network-wireless", exec: "launch-wifi", category: "Tools" },
-        { id: "action-bitwarden", name: "Bitwarden Password Vault", comment: "Open desktop password manager", icon: "bitwarden", exec: "launch-or-focus bitwarden bitwarden", category: "Tools" },
-        { id: "action-waypaper", name: "Wallpaper Picker (waypaper)", comment: "Select and set desktop wallpaper", icon: "preferences-desktop-wallpaper", exec: "waypaper", category: "Tools" }
     ]
 
     // Power & Session Actions
     readonly property var systemActions: [
-        { id: "action-lock", name: "Lock Screen", comment: "Lock display session immediately", icon: "system-lock-screen", exec: "hyprlock", category: "System" },
+        { id: "action-lock", name: "Lock Screen", comment: "Lock display session", icon: "system-lock-screen", exec: "hyprlock", category: "System" },
         { id: "action-suspend", name: "Suspend", comment: "Put system to sleep", icon: "system-suspend", exec: "systemctl suspend", category: "System" },
         { id: "action-reboot", name: "Reboot", comment: "Restart computer", icon: "system-reboot", exec: "systemctl reboot", category: "System" },
         { id: "action-shutdown", name: "Shutdown", comment: "Power off computer", icon: "system-shutdown", exec: "systemctl poweroff", category: "System" },
@@ -119,10 +104,9 @@ PanelWindow {
 
     function getBreadcrumbTitle() {
         if (searchInput.text.trim().length > 0) {
-            return "Search Results";
+            return "Search";
         }
         if (activeCategory === "apps") return "Applications";
-        if (activeCategory === "tools") return "System Tools & TUIs";
         if (activeCategory === "system") return "Power & Session";
         return "Menu";
     }
@@ -131,16 +115,9 @@ PanelWindow {
         var query = searchInput.text.trim().toLowerCase();
         var results = [];
 
-        // 1. Search Mode: Query matches across ALL items
+        // 1. Search Mode: Query matches across applications & system actions
         if (query.length > 0) {
-            // Tools
-            for (var t = 0; t < toolActions.length; t++) {
-                var tool = toolActions[t];
-                if (tool.name.toLowerCase().includes(query) || (tool.comment && tool.comment.toLowerCase().includes(query))) {
-                    results.push({ isApp: false, isCategory: false, name: tool.name, comment: tool.comment, icon: tool.icon, exec: tool.exec, badge: "Tool" });
-                }
-            }
-            // System
+            // Power / System
             for (var s = 0; s < systemActions.length; s++) {
                 var sys = systemActions[s];
                 if (sys.name.toLowerCase().includes(query) || (sys.comment && sys.comment.toLowerCase().includes(query))) {
@@ -156,7 +133,7 @@ PanelWindow {
                     var appName = app.name || "";
                     var appComment = app.comment || app.genericName || "";
                     if (appName.toLowerCase().includes(query) || appComment.toLowerCase().includes(query)) {
-                        results.push({ isApp: true, isCategory: false, name: appName, comment: appComment, icon: app.icon || "application-x-executable", appObj: app, badge: "App" });
+                        results.push({ isApp: true, isCategory: false, name: appName, comment: appComment, icon: app.icon || "application-x-executable", appObj: app, badge: "" });
                     }
                 }
             }
@@ -167,15 +144,7 @@ PanelWindow {
         if (activeCategory === "root") {
             for (var r = 0; r < rootCategories.length; r++) {
                 var cat = rootCategories[r];
-                results.push({ isApp: false, isCategory: true, id: cat.id, name: cat.name, comment: cat.comment, icon: cat.icon, badge: "Submenu" });
-            }
-            return results;
-        }
-
-        if (activeCategory === "tools") {
-            for (var t2 = 0; t2 < toolActions.length; t2++) {
-                var tool2 = toolActions[t2];
-                results.push({ isApp: false, isCategory: false, name: tool2.name, comment: tool2.comment, icon: tool2.icon, exec: tool2.exec, badge: "" });
+                results.push({ isApp: false, isCategory: true, id: cat.id, name: cat.name, comment: cat.comment, icon: cat.icon, badge: "" });
             }
             return results;
         }
@@ -225,8 +194,8 @@ PanelWindow {
     // Main Floating Modal Container
     Rectangle {
         id: modalBox
-        width: 580
-        height: Math.min(540, Math.max(140, 80 + (resultsList.count * 48)))
+        width: 460
+        height: Math.min(480, Math.max(120, 72 + (resultsList.count * 38)))
         anchors.centerIn: parent
         color: "#2e3440"
         border.color: "#4c566a"
@@ -241,19 +210,19 @@ PanelWindow {
 
         ColumnLayout {
             anchors.fill: parent
-            anchors.margins: 12
-            spacing: 8
+            anchors.margins: 10
+            spacing: 6
 
             // Header: Breadcrumb Path & Search Bar
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 8
+                spacing: 6
 
                 // Back Button (shown if in submenu)
                 Rectangle {
                     visible: menuWindow.activeCategory !== "root" && searchInput.text.length === 0
-                    width: 32
-                    height: 32
+                    width: 26
+                    height: 26
                     radius: 4
                     color: backMouseArea.containsMouse ? "#434c5e" : "#3b4252"
 
@@ -262,7 +231,7 @@ PanelWindow {
                         text: ""
                         color: "#88c0d0"
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 13
+                        font.pixelSize: 11
                     }
 
                     MouseArea {
@@ -279,7 +248,7 @@ PanelWindow {
                     text: menuWindow.getBreadcrumbTitle()
                     color: "#88c0d0"
                     font.family: "JetBrainsMono Nerd Font"
-                    font.pixelSize: 13
+                    font.pixelSize: 12
                     font.bold: true
                     Layout.alignment: Qt.AlignVCenter
                 }
@@ -288,23 +257,23 @@ PanelWindow {
             // Search Bar
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 38
+                Layout.preferredHeight: 34
                 color: "#3b4252"
-                radius: 6
+                radius: 5
                 border.color: searchInput.activeFocus ? "#88c0d0" : "#434c5e"
                 border.width: 1
 
                 RowLayout {
                     anchors.fill: parent
-                    anchors.leftMargin: 10
-                    anchors.rightMargin: 10
-                    spacing: 8
+                    anchors.leftMargin: 8
+                    anchors.rightMargin: 8
+                    spacing: 6
 
                     Text {
                         text: "󰍉"
                         color: "#88c0d0"
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 15
+                        font.pixelSize: 13
                     }
 
                     TextInput {
@@ -312,7 +281,7 @@ PanelWindow {
                         Layout.fillWidth: true
                         color: "#eceff4"
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 13
+                        font.pixelSize: 12
                         selectByMouse: true
                         selectionColor: "#88c0d0"
                         selectedTextColor: "#2e3440"
@@ -320,7 +289,7 @@ PanelWindow {
 
                         Text {
                             anchors.fill: parent
-                            text: menuWindow.activeCategory === "root" ? "Search all applications & actions..." : `Filter in ${menuWindow.getBreadcrumbTitle()}...`
+                            text: menuWindow.activeCategory === "root" ? "Search applications & actions..." : `Filter in ${menuWindow.getBreadcrumbTitle()}...`
                             color: "#d8dee9"
                             opacity: 0.4
                             font.family: searchInput.font.family
@@ -376,20 +345,20 @@ PanelWindow {
                     required property int index
 
                     width: resultsList.width
-                    height: 44
+                    height: 34
                     radius: 4
                     color: index === menuWindow.searchIndex ? "#434c5e" : (rowMouseArea.containsMouse ? "#3b4252" : "transparent")
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 10
-                        anchors.rightMargin: 10
-                        spacing: 10
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        spacing: 8
 
-                        // Icon
+                        // Scaled 16x16 App / Action Icon
                         Image {
-                            width: 22
-                            height: 22
+                            width: 16
+                            height: 16
                             source: Quickshell.iconPath(modelData.icon, true)
                             fillMode: Image.PreserveAspectFit
                             visible: source.toString() !== ""
@@ -397,13 +366,13 @@ PanelWindow {
 
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 1
+                            spacing: 0
 
                             Text {
                                 text: modelData.name
                                 color: index === menuWindow.searchIndex ? "#88c0d0" : "#eceff4"
                                 font.family: "JetBrainsMono Nerd Font"
-                                font.pixelSize: 12
+                                font.pixelSize: 11
                                 font.bold: index === menuWindow.searchIndex || modelData.isCategory
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
@@ -412,22 +381,23 @@ PanelWindow {
                             Text {
                                 text: modelData.comment
                                 color: "#d8dee9"
-                                opacity: 0.6
+                                opacity: 0.5
                                 font.family: "JetBrainsMono Nerd Font"
-                                font.pixelSize: 10
+                                font.pixelSize: 9
                                 elide: Text.ElideRight
-                                visible: modelData.comment !== ""
+                                visible: modelData.comment !== "" && modelData.comment !== modelData.name
                                 Layout.fillWidth: true
                             }
                         }
 
-                        // Badge / Arrow indicator
+                        // Category arrow
                         Text {
-                            text: modelData.isCategory ? "" : (modelData.badge ? modelData.badge : "")
-                            color: modelData.isCategory ? "#88c0d0" : "#81a1c1"
+                            text: modelData.isCategory ? "" : ""
+                            color: "#88c0d0"
                             font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: modelData.isCategory ? 12 : 10
-                            opacity: modelData.isCategory ? 0.8 : 0.6
+                            font.pixelSize: 10
+                            opacity: 0.7
+                            visible: modelData.isCategory
                             Layout.alignment: Qt.AlignVCenter
                         }
                     }

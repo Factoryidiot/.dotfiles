@@ -91,8 +91,9 @@ Item {
         id: toolTip
         visible: mouseArea.containsMouse && root.tooltipText !== ""
         text: root.tooltipText
-        delay: 500
+        delay: 400
         timeout: 4000
+        y: root.height + 6
 
         contentItem: Text {
             text: toolTip.text

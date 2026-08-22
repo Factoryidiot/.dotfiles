@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Quickshell.Io
-import Quickshell.Services.Pipewire
 import Quickshell.Services.SystemTray
 import "../components"
 
@@ -81,8 +80,9 @@ RowLayout {
                     id: trayToolTip
                     visible: trayMouseArea.containsMouse && (trayDelegate.modelData.tooltip !== "" || trayDelegate.modelData.title !== "")
                     text: trayDelegate.modelData.tooltip !== "" ? trayDelegate.modelData.tooltip : trayDelegate.modelData.title
-                    delay: 500
+                    delay: 400
                     timeout: 4000
+                    y: parent.height + 6
 
                     contentItem: Text {
                         text: trayToolTip.text
@@ -160,7 +160,7 @@ RowLayout {
         }
     }
 
-    // 4. Network Module
+    // 4. Network Module (iwd & nmcli aware)
     Item {
         id: netModule
         implicitWidth: netBtn.implicitWidth
@@ -171,7 +171,36 @@ RowLayout {
 
         Process {
             id: netProc
-            command: ["zsh", "-c", "nmcli -t -f TYPE,STATE,SIGNAL,CONNECTION dev | grep ':connected' | head -1"]
+            command: ["zsh", "-c", `
+                # Check for active ethernet first
+                for eth in /sys/class/net/e*; do
+                    if [[ -d "$eth" && "$(cat $eth/operstate 2>/dev/null)" == "up" ]]; then
+                        echo "ethernet:Connected"
+                        exit 0
+                    fi
+                done
+
+                # Check iwd (iwctl)
+                iw_out=$(iwctl station wlan0 show 2>/dev/null)
+                if [[ "$iw_out" =~ "State"[[:space:]]+"connected" ]]; then
+                    ssid=$(echo "$iw_out" | grep "Connected network" | sed "s/.*Connected network[[:space:]]*//" | xargs)
+                    rssi=$(echo "$iw_out" | grep "RSSI" | head -1 | grep -oE -- "-[0-9]+" | head -1)
+                    echo "wifi:\${ssid:-Connected}:\${rssi:--60}"
+                    exit 0
+                fi
+
+                # Check nmcli fallback
+                if command -v nmcli &>/dev/null; then
+                    nm_out=$(nmcli -t -f TYPE,STATE,SIGNAL,CONNECTION dev 2>/dev/null | grep ':connected' | head -1)
+                    if [[ "$nm_out" =~ ^wifi ]]; then
+                        parts=(\${(s/:/)nm_out})
+                        echo "wifi:\${parts[4]:-Connected}:\${parts[3]:-70}"
+                        exit 0
+                    fi
+                fi
+
+                echo "disconnected"
+            `]
             running: true
             stdout: StdioCollector {
                 onStreamFinished: {
@@ -181,13 +210,25 @@ RowLayout {
                         netModule.netTooltip = "Ethernet Connected\nClick: WiFi Manager (impala)";
                     } else if (out.startsWith("wifi")) {
                         let parts = out.split(":");
-                        let sig = parseInt(parts[2]) || 70;
-                        if (sig >= 80) netModule.netIcon = "󰤨";
-                        else if (sig >= 60) netModule.netIcon = "󰤥";
-                        else if (sig >= 40) netModule.netIcon = "󰤢";
-                        else if (sig >= 20) netModule.netIcon = "󰤟";
+                        let ssid = parts[1] || "WiFi";
+                        let val = parseInt(parts[2]) || -60;
+                        
+                        // Handle RSSI (dBm, negative) or percentage (0-100)
+                        let percent = 70;
+                        if (val < 0) {
+                            // Convert dBm (-100 to -50) to percentage
+                            percent = Math.min(100, Math.max(0, Math.round(2 * (val + 100))));
+                        } else {
+                            percent = val;
+                        }
+
+                        if (percent >= 80) netModule.netIcon = "󰤨";
+                        else if (percent >= 60) netModule.netIcon = "󰤥";
+                        else if (percent >= 40) netModule.netIcon = "󰤢";
+                        else if (percent >= 20) netModule.netIcon = "󰤟";
                         else netModule.netIcon = "󰤯";
-                        netModule.netTooltip = `WiFi: ${parts[3] || "Connected"} (${sig}%)\nClick: WiFi Manager (impala)`;
+
+                        netModule.netTooltip = `WiFi: ${ssid} (${percent}%)\nClick: WiFi Manager (impala)`;
                     } else {
                         netModule.netIcon = "󰤮";
                         netModule.netTooltip = "Network Disconnected\nClick: WiFi Manager (impala)";
@@ -214,16 +255,38 @@ RowLayout {
         }
     }
 
-    // 5. Audio / Pipewire Module
+    // 5. Audio / Pipewire Module (pamixer integration)
     Item {
         id: audioModule
         implicitWidth: audioBtn.implicitWidth
         implicitHeight: audioBtn.implicitHeight
 
-        readonly property var sink: Pipewire.defaultAudioSink
-        readonly property bool isMuted: sink && sink.audio ? sink.audio.muted : false
-        readonly property real volume: sink && sink.audio ? sink.audio.volume : 0.5
-        readonly property int volumePercent: Math.round(volume * 100)
+        property int volumePercent: 80
+        property bool isMuted: false
+
+        Process {
+            id: audioProc
+            command: ["zsh", "-c", "pamixer --get-volume 2>/dev/null; pamixer --get-mute 2>/dev/null"]
+            running: true
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    let lines = this.text.trim().split("\n");
+                    if (lines.length >= 1 && lines[0] !== "") {
+                        audioModule.volumePercent = parseInt(lines[0]) || 0;
+                    }
+                    if (lines.length >= 2) {
+                        audioModule.isMuted = (lines[1].trim() === "true");
+                    }
+                }
+            }
+        }
+
+        Timer {
+            interval: 2000
+            running: true
+            repeat: true
+            onTriggered: audioProc.running = true
+        }
 
         function getAudioIcon() {
             if (isMuted || volumePercent === 0) return "";
@@ -241,30 +304,27 @@ RowLayout {
 
             onClicked: root.runCmd("launch-or-focus-tui wiremix")
             onRightClicked: {
-                if (audioModule.sink && audioModule.sink.audio) {
-                    audioModule.sink.audio.muted = !audioModule.sink.audio.muted;
-                } else {
-                    root.runCmd("pamixer -t");
-                }
+                root.runCmd("pamixer -t");
+                audioRefreshTimer.restart();
             }
             onScrollUp: {
-                if (audioModule.sink && audioModule.sink.audio) {
-                    audioModule.sink.audio.volume = Math.min(1.0, audioModule.sink.audio.volume + 0.05);
-                } else {
-                    root.runCmd("pamixer -i 5");
-                }
+                root.runCmd("pamixer -i 5");
+                audioRefreshTimer.restart();
             }
             onScrollDown: {
-                if (audioModule.sink && audioModule.sink.audio) {
-                    audioModule.sink.audio.volume = Math.max(0.0, audioModule.sink.audio.volume - 0.05);
-                } else {
-                    root.runCmd("pamixer -d 5");
-                }
+                root.runCmd("pamixer -d 5");
+                audioRefreshTimer.restart();
             }
+        }
+
+        Timer {
+            id: audioRefreshTimer
+            interval: 150
+            onTriggered: audioProc.running = true
         }
     }
 
-    // 6. Battery Module
+    // 6. Battery / Power Module (AC plug & threshold aware)
     Item {
         id: batModule
         implicitWidth: batBtn.implicitWidth
@@ -272,19 +332,24 @@ RowLayout {
 
         property int capacity: 100
         property string status: "Discharging"
+        property bool isPluggedIn: false
 
         Process {
             id: batProc
-            command: ["zsh", "-c", "cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1; cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -1"]
+            command: ["zsh", "-c", `
+                ac=$(cat /sys/class/power_supply/AC*/online 2>/dev/null | head -1)
+                cap=$(cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1)
+                stat=$(cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -1)
+                echo "\${ac:-0}|\${cap:-100}|\${stat:-Discharging}"
+            `]
             running: true
             stdout: StdioCollector {
                 onStreamFinished: {
-                    let lines = this.text.trim().split("\n");
-                    if (lines.length >= 1 && lines[0] !== "") {
-                        batModule.capacity = parseInt(lines[0]) || 100;
-                    }
-                    if (lines.length >= 2) {
-                        batModule.status = lines[1].trim();
+                    let parts = this.text.trim().split("|");
+                    if (parts.length >= 3) {
+                        batModule.isPluggedIn = (parts[0].trim() === "1");
+                        batModule.capacity = parseInt(parts[1]) || 100;
+                        batModule.status = parts[2].trim();
                     }
                 }
             }
@@ -299,17 +364,26 @@ RowLayout {
 
         function getBatIcon() {
             let cap = capacity;
-            let charging = status === "Charging" || status === "Full";
-            if (charging) {
-                if (cap >= 90) return "󰂅";
-                if (cap >= 80) return "󰂋";
-                if (cap >= 70) return "󰂊";
-                if (cap >= 60) return "󰂉";
-                if (cap >= 50) return "󰢝";
-                if (cap >= 40) return "󰂈";
-                if (cap >= 30) return "󰂇";
-                if (cap >= 20) return "󰂆";
-                return "󰢜";
+            let charging = status === "Charging";
+            let fullOrHeld = status === "Full" || status === "Not charging";
+
+            if (isPluggedIn) {
+                if (fullOrHeld) {
+                    // Plugged in at charge limit / full
+                    return "";
+                }
+                if (charging) {
+                    if (cap >= 90) return "󰂅";
+                    if (cap >= 80) return "󰂋";
+                    if (cap >= 70) return "󰂊";
+                    if (cap >= 60) return "󰂉";
+                    if (cap >= 50) return "󰢝";
+                    if (cap >= 40) return "󰂈";
+                    if (cap >= 30) return "󰂇";
+                    if (cap >= 20) return "󰂆";
+                    return "󰢜";
+                }
+                return "";
             } else {
                 if (cap >= 90) return "󰁹";
                 if (cap >= 80) return "󰂂";
@@ -324,11 +398,25 @@ RowLayout {
             }
         }
 
+        function getTooltipText() {
+            if (isPluggedIn) {
+                if (status === "Not charging") {
+                    return `Power: Plugged In (${capacity}%, Charge Threshold Active)\nClick: Power Menu\nRight-click: Detailed Status`;
+                } else if (status === "Charging") {
+                    return `Power: Charging (${capacity}%)\nClick: Power Menu\nRight-click: Detailed Status`;
+                } else {
+                    return `Power: Plugged In (${capacity}%)\nClick: Power Menu\nRight-click: Detailed Status`;
+                }
+            } else {
+                return `Battery: ${capacity}% (${status})\nClick: Power Menu\nRight-click: Detailed Status`;
+            }
+        }
+
         IconButton {
             id: batBtn
             iconText: batModule.getBatIcon()
-            color: batModule.capacity <= 15 ? "#bf616a" : (batModule.capacity <= 25 ? "#ebcb8b" : "#d8dee9")
-            tooltipText: `Battery: ${batModule.capacity}% (${batModule.status})\nClick: Power Menu\nRight-click: Detailed Status`
+            color: (!batModule.isPluggedIn && batModule.capacity <= 15) ? "#bf616a" : ((!batModule.isPluggedIn && batModule.capacity <= 25) ? "#ebcb8b" : "#d8dee9")
+            tooltipText: batModule.getTooltipText()
             paddingHorizontal: 3
 
             onClicked: root.runCmd("launch-menu power")

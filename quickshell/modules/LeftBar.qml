@@ -8,6 +8,7 @@ RowLayout {
     spacing: 8
 
     property var bar: null
+    property var menu: null
 
     // Helper process to execute commands asynchronously
     function runCmd(cmd) {
@@ -25,10 +26,16 @@ RowLayout {
     IconButton {
         iconText: ""
         color: "#88c0d0"
-        tooltipText: "Menu (Super + Alt + Space)\nRight-click: Terminal"
+        tooltipText: "Menu (Super + Space)\nRight-click: Terminal"
         paddingHorizontal: 6
 
-        onClicked: root.runCmd("launch-menu")
+        onClicked: {
+            if (root.menu) {
+                root.menu.toggle();
+            } else {
+                root.runCmd("quickshell -p ~/.dotfiles/quickshell ipc call menu toggle");
+            }
+        }
         onRightClicked: root.runCmd("xdg-terminal-exec")
     }
 }

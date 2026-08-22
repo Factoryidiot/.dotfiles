@@ -7,6 +7,11 @@ import "./modules"
 ShellRoot {
     id: root
 
+    // Central Application & Actions Launcher Menu
+    Menu {
+        id: appMenu
+    }
+
     Variants {
         // Target internal laptop display (eDP), falling back to first screen if running standalone
         model: {
@@ -77,10 +82,11 @@ ShellRoot {
                         color: "#3b4252"
                     }
 
-                    // Left Section (Menu, Idle Inhibitor)
+                    // Left Section (Menu)
                     LeftBar {
                         id: leftModules
                         bar: barWindow
+                        menu: appMenu
                         anchors.left: parent.left
                         anchors.leftMargin: 8
                         anchors.verticalCenter: parent.verticalCenter

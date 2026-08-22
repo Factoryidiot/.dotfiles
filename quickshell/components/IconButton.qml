@@ -46,7 +46,7 @@ Item {
             id: iconLabel
             text: root.iconText
             color: root.isActive ? root.activeColor : root.color
-            font.family: "CaskaydiaMono Nerd Font"
+            font.family: "JetBrainsMono Nerd Font"
             font.pixelSize: 13
             visible: root.iconText !== ""
             anchors.verticalCenter: parent.verticalCenter
@@ -56,7 +56,7 @@ Item {
             id: textLabel
             text: root.text
             color: root.isActive ? root.activeColor : root.color
-            font.family: "CaskaydiaMono Nerd Font"
+            font.family: "JetBrainsMono Nerd Font"
             font.pixelSize: 12
             visible: root.text !== ""
             anchors.verticalCenter: parent.verticalCenter
@@ -97,7 +97,7 @@ Item {
         contentItem: Text {
             text: toolTip.text
             color: "#d8dee9"
-            font.family: "CaskaydiaMono Nerd Font"
+            font.family: "JetBrainsMono Nerd Font"
             font.pixelSize: 11
         }
 

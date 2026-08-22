@@ -2,11 +2,12 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell.Io
 import Quickshell.Services.Pipewire
+import Quickshell.Services.SystemTray
 import "../components"
 
 RowLayout {
     id: root
-    spacing: 10
+    spacing: 8
 
     function runCmd(cmd) {
         cmdRunner.command = ["zsh", "-c", cmd];
@@ -19,7 +20,81 @@ RowLayout {
         running: false
     }
 
-    // 1. Bluetooth Module
+    // 1. System Tray
+    RowLayout {
+        id: trayRow
+        spacing: 4
+        visible: SystemTray.items.values.length > 0
+
+        Repeater {
+            model: SystemTray.items.values
+            delegate: Item {
+                id: trayDelegate
+                required property SystemTrayItem modelData
+
+                implicitWidth: 20
+                implicitHeight: 24
+
+                Rectangle {
+                    id: trayBg
+                    anchors.fill: parent
+                    radius: 3
+                    color: "#434c5e"
+                    opacity: trayMouseArea.containsMouse ? 0.4 : 0.0
+                    visible: trayMouseArea.containsMouse
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: 120 }
+                    }
+                }
+
+                Image {
+                    anchors.centerIn: parent
+                    width: 14
+                    height: 14
+                    source: trayDelegate.modelData.icon
+                    fillMode: Image.PreserveAspectFit
+                }
+
+                MouseArea {
+                    id: trayMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    cursorShape: Qt.PointingHandCursor
+
+                    onClicked: mouse => {
+                        if (mouse.button === Qt.RightButton) {
+                            if (trayDelegate.modelData.hasMenu) {
+                                trayDelegate.modelData.secondaryActivate();
+                            } else {
+                                trayDelegate.modelData.activate();
+                            }
+                        } else {
+                            trayDelegate.modelData.activate();
+                        }
+                    }
+
+                    ToolTip.visible: containsMouse && (trayDelegate.modelData.tooltip !== "" || trayDelegate.modelData.title !== "")
+                    ToolTip.text: trayDelegate.modelData.tooltip !== "" ? trayDelegate.modelData.tooltip : trayDelegate.modelData.title
+                    ToolTip.delay: 500
+                    ToolTip.timeout: 4000
+                }
+            }
+        }
+    }
+
+    // 2. CPU / Resource Monitor
+    IconButton {
+        iconText: "󰍛"
+        color: "#d8dee9"
+        tooltipText: "Resource Monitor (Click: btop)"
+        paddingHorizontal: 3
+
+        onClicked: root.runCmd("launch-or-focus-tui btop")
+    }
+
+    // 3. Bluetooth Module
     Item {
         id: btModule
         implicitWidth: btBtn.implicitWidth
@@ -37,13 +112,13 @@ RowLayout {
                     let out = this.text.trim();
                     if (out === "connected") {
                         btModule.btIcon = "󰂱";
-                        btModule.btTooltip = "Bluetooth: Connected";
+                        btModule.btTooltip = "Bluetooth: Connected\nClick: Bluetooth Manager (bluetui)";
                     } else if (out === "on") {
                         btModule.btIcon = "";
-                        btModule.btTooltip = "Bluetooth: Enabled";
+                        btModule.btTooltip = "Bluetooth: Enabled\nClick: Bluetooth Manager (bluetui)";
                     } else {
                         btModule.btIcon = "󰂲";
-                        btModule.btTooltip = "Bluetooth: Disabled";
+                        btModule.btTooltip = "Bluetooth: Disabled\nClick: Bluetooth Manager (bluetui)";
                     }
                 }
             }
@@ -59,15 +134,15 @@ RowLayout {
         IconButton {
             id: btBtn
             iconText: btModule.btIcon
-            color: "#d8dee9"
+            color: btModule.btIcon === "󰂱" ? "#88c0d0" : "#d8dee9"
             tooltipText: btModule.btTooltip
-            paddingHorizontal: 2
+            paddingHorizontal: 3
 
-            onClicked: root.runCmd("launch-bluetooth")
+            onClicked: root.runCmd("launch-or-focus-tui bluetui")
         }
     }
 
-    // 2. Network Module
+    // 4. Network Module
     Item {
         id: netModule
         implicitWidth: netBtn.implicitWidth
@@ -85,7 +160,7 @@ RowLayout {
                     let out = this.text.trim();
                     if (out.startsWith("ethernet")) {
                         netModule.netIcon = "󰀂";
-                        netModule.netTooltip = "Ethernet Connected";
+                        netModule.netTooltip = "Ethernet Connected\nClick: WiFi Manager (impala)";
                     } else if (out.startsWith("wifi")) {
                         let parts = out.split(":");
                         let sig = parseInt(parts[2]) || 70;
@@ -94,10 +169,10 @@ RowLayout {
                         else if (sig >= 40) netModule.netIcon = "󰤢";
                         else if (sig >= 20) netModule.netIcon = "󰤟";
                         else netModule.netIcon = "󰤯";
-                        netModule.netTooltip = `WiFi: ${parts[3] || "Connected"} (${sig}%)`;
+                        netModule.netTooltip = `WiFi: ${parts[3] || "Connected"} (${sig}%)\nClick: WiFi Manager (impala)`;
                     } else {
                         netModule.netIcon = "󰤮";
-                        netModule.netTooltip = "Network Disconnected";
+                        netModule.netTooltip = "Network Disconnected\nClick: WiFi Manager (impala)";
                     }
                 }
             }
@@ -115,13 +190,13 @@ RowLayout {
             iconText: netModule.netIcon
             color: "#d8dee9"
             tooltipText: netModule.netTooltip
-            paddingHorizontal: 2
+            paddingHorizontal: 3
 
             onClicked: root.runCmd("launch-wifi")
         }
     }
 
-    // 3. Audio / Pipewire Module
+    // 5. Audio / Pipewire Module
     Item {
         id: audioModule
         implicitWidth: audioBtn.implicitWidth
@@ -142,10 +217,9 @@ RowLayout {
         IconButton {
             id: audioBtn
             iconText: audioModule.getAudioIcon()
-            text: `${audioModule.volumePercent}%`
             color: audioModule.isMuted ? "#bf616a" : "#d8dee9"
-            tooltipText: `Volume: ${audioModule.volumePercent}%${audioModule.isMuted ? " (Muted)" : ""}`
-            paddingHorizontal: 2
+            tooltipText: `Volume: ${audioModule.volumePercent}%${audioModule.isMuted ? " (Muted)" : ""}\nClick: Audio Mixer (wiremix)\nScroll: Volume Up/Down\nRight-click: Mute Toggle`
+            paddingHorizontal: 3
 
             onClicked: root.runCmd("launch-or-focus-tui wiremix")
             onRightClicked: {
@@ -172,17 +246,7 @@ RowLayout {
         }
     }
 
-    // 4. CPU Module
-    IconButton {
-        iconText: "󰍛"
-        color: "#d8dee9"
-        tooltipText: "CPU / Process Monitor"
-        paddingHorizontal: 2
-
-        onClicked: root.runCmd("launch-or-focus-tui btop")
-    }
-
-    // 5. Battery Module
+    // 6. Battery Module
     Item {
         id: batModule
         implicitWidth: batBtn.implicitWidth
@@ -190,7 +254,6 @@ RowLayout {
 
         property int capacity: 100
         property string status: "Discharging"
-        property string powerDraw: ""
 
         Process {
             id: batProc
@@ -245,18 +308,62 @@ RowLayout {
 
         IconButton {
             id: batBtn
-            text: `${batModule.capacity}%`
             iconText: batModule.getBatIcon()
             color: batModule.capacity <= 15 ? "#bf616a" : (batModule.capacity <= 25 ? "#ebcb8b" : "#d8dee9")
-            tooltipText: `Battery: ${batModule.capacity}% (${batModule.status})`
-            paddingHorizontal: 2
+            tooltipText: `Battery: ${batModule.capacity}% (${batModule.status})\nClick: Power Menu\nRight-click: Detailed Status`
+            paddingHorizontal: 3
 
             onClicked: root.runCmd("launch-menu power")
             onRightClicked: root.runCmd('notify-send -u low "$(battery-status)"')
         }
     }
 
-    // 6. Clock Module
+    // 7. Weather Module (placed beside clock)
+    Item {
+        id: weatherModule
+        implicitWidth: weatherBtn.implicitWidth
+        implicitHeight: weatherBtn.implicitHeight
+
+        property string weatherIcon: ""
+        property string weatherTooltip: "Loading weather..."
+
+        Process {
+            id: weatherProc
+            command: ["weather"]
+            running: true
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    try {
+                        let json = JSON.parse(this.text.trim());
+                        if (json.text) weatherModule.weatherIcon = json.text;
+                        if (json.tooltip) weatherModule.weatherTooltip = json.tooltip;
+                    } catch (e) {
+                        weatherModule.weatherIcon = "";
+                    }
+                }
+            }
+        }
+
+        Timer {
+            interval: 900000 // 15 minutes
+            running: true
+            repeat: true
+            onTriggered: weatherProc.running = true
+        }
+
+        IconButton {
+            id: weatherBtn
+            iconText: weatherModule.weatherIcon
+            color: "#d8dee9"
+            tooltipText: `${weatherModule.weatherTooltip}\nClick: Refresh | Right-click: Weather Report`
+            paddingHorizontal: 3
+
+            onClicked: weatherProc.running = true
+            onRightClicked: root.runCmd("launch-weather-report")
+        }
+    }
+
+    // 8. Clock Module
     Item {
         id: clockModule
         implicitWidth: clockBtn.implicitWidth
@@ -286,7 +393,7 @@ RowLayout {
             text: clockModule.getClockText()
             color: "#d8dee9"
             tooltipText: "Left-click: Toggle Date Format\nRight-click: Timezone Select"
-            paddingHorizontal: 4
+            paddingHorizontal: 5
 
             onClicked: clockModule.showAltFormat = !clockModule.showAltFormat
             onRightClicked: root.runCmd("launch-floating-terminal-with-presentation tz-select")

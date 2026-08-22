@@ -4,8 +4,8 @@
 
 -- [Launchers]
 hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd([[uwsm-app -- xdg-terminal-exec --dir="$(cmd-terminal-cwd)"]]), { desc = "Terminal" })
-hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("launch-menu-applications"), { desc = "Application menu" })
-hl.bind(mainMod .. " + ALT + SPACE", hl.dsp.exec_cmd("launch-menu"), { desc = "Menu" })
+hl.bind(mainMod .. " + SPACE", hl.dsp.exec_cmd("quickshell ipc call menu toggle"), { desc = "Application menu" })
+hl.bind(mainMod .. " + ALT + SPACE", hl.dsp.exec_cmd("quickshell ipc call menu toggle"), { desc = "Menu" })
 hl.bind(mainMod .. " + F", hl.dsp.exec_cmd("launch-or-focus-tui yazi"), { desc = "File manager" })
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("uwsm-app -- firefox"), { desc = "Web browser" })
 

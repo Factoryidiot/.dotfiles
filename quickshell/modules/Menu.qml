@@ -9,11 +9,16 @@ PanelWindow {
     id: menuWindow
 
     property bool isOpen: false
+    property string activeCategory: "root"
+    property var navHistory: []
+    property int searchIndex: 0
 
-    function open() {
-        isOpen = true;
+    function open(category) {
+        activeCategory = category || "root";
+        navHistory = [];
         searchInput.text = "";
         searchIndex = 0;
+        isOpen = true;
         searchInput.forceActiveFocus();
     }
 
@@ -22,9 +27,29 @@ PanelWindow {
         searchInput.focus = false;
     }
 
-    function toggle() {
+    function toggle(category) {
         if (isOpen) close();
-        else open();
+        else open(category);
+    }
+
+    function drillDown(categoryId) {
+        navHistory.push(activeCategory);
+        activeCategory = categoryId;
+        searchInput.text = "";
+        searchIndex = 0;
+    }
+
+    function goBack() {
+        if (searchInput.text.length > 0) {
+            searchInput.text = "";
+            return;
+        }
+        if (navHistory.length > 0) {
+            activeCategory = navHistory.pop();
+            searchIndex = 0;
+        } else {
+            close();
+        }
     }
 
     // Full screen overlay for backdrop dismiss
@@ -44,9 +69,12 @@ PanelWindow {
 
     IpcHandler {
         target: "menu"
-        function toggle(): void { menuWindow.toggle(); }
-        function open(): void { menuWindow.open(); }
+        function toggle(): void { menuWindow.toggle("root"); }
+        function open(): void { menuWindow.open("root"); }
         function close(): void { menuWindow.close(); }
+        function apps(): void { menuWindow.open("apps"); }
+        function power(): void { menuWindow.open("system"); }
+        function tools(): void { menuWindow.open("tools"); }
     }
 
     // Helper process to execute commands asynchronously
@@ -62,59 +90,115 @@ PanelWindow {
         menuWindow.close();
     }
 
-    // Built-in system actions
-    readonly property var systemActions: [
-        { id: "action-terminal", name: "Terminal", comment: "Ghostty Terminal", icon: "utilities-terminal", exec: "xdg-terminal-exec" },
-        { id: "action-btop", name: "Resource Monitor (btop)", comment: "System process and resource monitor", icon: "utilities-system-monitor", exec: "launch-or-focus-tui btop" },
-        { id: "action-wiremix", name: "Audio Mixer (wiremix)", comment: "PipeWire volume and audio device control", icon: "audio-card", exec: "launch-or-focus-tui wiremix" },
-        { id: "action-bluetui", name: "Bluetooth Manager (bluetui)", comment: "Bluetooth device management", icon: "bluetooth", exec: "launch-or-focus-tui bluetui" },
-        { id: "action-impala", name: "WiFi Manager (impala)", comment: "Wireless network configuration", icon: "network-wireless", exec: "launch-wifi" },
-        { id: "action-lock", name: "Lock Screen", comment: "Lock display session", icon: "system-lock-screen", exec: "hyprlock" },
-        { id: "action-suspend", name: "Suspend", comment: "Sleep / suspend system", icon: "system-suspend", exec: "systemctl suspend" },
-        { id: "action-reboot", name: "Reboot", comment: "Restart computer", icon: "system-reboot", exec: "systemctl reboot" },
-        { id: "action-shutdown", name: "Shutdown", comment: "Power off computer", icon: "system-shutdown", exec: "systemctl poweroff" }
+    // Top-Level Categories
+    readonly property var rootCategories: [
+        { id: "apps", name: "Applications", comment: "Browse all installed desktop applications", icon: "applications-other", isCategory: true },
+        { id: "tools", name: "System Tools & TUIs", comment: "Task managers, mixers, wifi and bluetooth utilities", icon: "utilities-system-monitor", isCategory: true },
+        { id: "system", name: "Power & Session", comment: "Lock, suspend, reboot, shutdown, and logout", icon: "system-shutdown", isCategory: true }
     ]
 
-    property int searchIndex: 0
+    // System Tools & TUIs
+    readonly property var toolActions: [
+        { id: "action-terminal", name: "Terminal", comment: "Ghostty GPU-accelerated terminal", icon: "utilities-terminal", exec: "xdg-terminal-exec", category: "Tools" },
+        { id: "action-btop", name: "Resource Monitor (btop)", comment: "Interactive process viewer and hardware stats", icon: "utilities-system-monitor", exec: "launch-or-focus-tui btop", category: "Tools" },
+        { id: "action-wiremix", name: "Audio Mixer (wiremix)", comment: "PipeWire sound and stream volume controls", icon: "audio-card", exec: "launch-or-focus-tui wiremix", category: "Tools" },
+        { id: "action-bluetui", name: "Bluetooth Manager (bluetui)", comment: "Manage paired and connected Bluetooth devices", icon: "bluetooth", exec: "launch-or-focus-tui bluetui", category: "Tools" },
+        { id: "action-impala", name: "WiFi Manager (impala)", comment: "Scan, connect, and configure wireless networks", icon: "network-wireless", exec: "launch-wifi", category: "Tools" },
+        { id: "action-bitwarden", name: "Bitwarden Password Vault", comment: "Open desktop password manager", icon: "bitwarden", exec: "launch-or-focus bitwarden bitwarden", category: "Tools" },
+        { id: "action-waypaper", name: "Wallpaper Picker (waypaper)", comment: "Select and set desktop wallpaper", icon: "preferences-desktop-wallpaper", exec: "waypaper", category: "Tools" }
+    ]
 
-    function getFilteredItems() {
+    // Power & Session Actions
+    readonly property var systemActions: [
+        { id: "action-lock", name: "Lock Screen", comment: "Lock display session immediately", icon: "system-lock-screen", exec: "hyprlock", category: "System" },
+        { id: "action-suspend", name: "Suspend", comment: "Put system to sleep", icon: "system-suspend", exec: "systemctl suspend", category: "System" },
+        { id: "action-reboot", name: "Reboot", comment: "Restart computer", icon: "system-reboot", exec: "systemctl reboot", category: "System" },
+        { id: "action-shutdown", name: "Shutdown", comment: "Power off computer", icon: "system-shutdown", exec: "systemctl poweroff", category: "System" },
+        { id: "action-logout", name: "Log Out", comment: "Exit current desktop session", icon: "system-log-out", exec: "hyprctl dispatch exit", category: "System" }
+    ]
+
+    function getBreadcrumbTitle() {
+        if (searchInput.text.trim().length > 0) {
+            return "Search Results";
+        }
+        if (activeCategory === "apps") return "Applications";
+        if (activeCategory === "tools") return "System Tools & TUIs";
+        if (activeCategory === "system") return "Power & Session";
+        return "Menu";
+    }
+
+    function getDisplayItems() {
         var query = searchInput.text.trim().toLowerCase();
         var results = [];
 
-        // 1. Match System Actions
-        for (var i = 0; i < systemActions.length; i++) {
-            var act = systemActions[i];
-            if (query === "" || act.name.toLowerCase().includes(query) || (act.comment && act.comment.toLowerCase().includes(query))) {
-                results.push({
-                    isApp: false,
-                    id: act.id,
-                    name: act.name,
-                    comment: act.comment,
-                    icon: act.icon,
-                    exec: act.exec
-                });
-            }
-        }
-
-        // 2. Match Desktop Applications
-        if (DesktopEntries && DesktopEntries.applications) {
-            var apps = DesktopEntries.applications.values;
-            for (var j = 0; j < apps.length; j++) {
-                var app = apps[j];
-                if (!app || app.nodisplay) continue;
-                var appName = app.name || "";
-                var appComment = app.comment || app.genericName || "";
-                if (query === "" || appName.toLowerCase().includes(query) || appComment.toLowerCase().includes(query)) {
-                    results.push({
-                        isApp: true,
-                        id: app.id,
-                        name: appName,
-                        comment: appComment,
-                        icon: app.icon || "application-x-executable",
-                        appObj: app
-                    });
+        // 1. Search Mode: Query matches across ALL items
+        if (query.length > 0) {
+            // Tools
+            for (var t = 0; t < toolActions.length; t++) {
+                var tool = toolActions[t];
+                if (tool.name.toLowerCase().includes(query) || (tool.comment && tool.comment.toLowerCase().includes(query))) {
+                    results.push({ isApp: false, isCategory: false, name: tool.name, comment: tool.comment, icon: tool.icon, exec: tool.exec, badge: "Tool" });
                 }
             }
+            // System
+            for (var s = 0; s < systemActions.length; s++) {
+                var sys = systemActions[s];
+                if (sys.name.toLowerCase().includes(query) || (sys.comment && sys.comment.toLowerCase().includes(query))) {
+                    results.push({ isApp: false, isCategory: false, name: sys.name, comment: sys.comment, icon: sys.icon, exec: sys.exec, badge: "System" });
+                }
+            }
+            // Applications
+            if (DesktopEntries && DesktopEntries.applications) {
+                var apps = DesktopEntries.applications.values;
+                for (var a = 0; a < apps.length; a++) {
+                    var app = apps[a];
+                    if (!app || app.nodisplay) continue;
+                    var appName = app.name || "";
+                    var appComment = app.comment || app.genericName || "";
+                    if (appName.toLowerCase().includes(query) || appComment.toLowerCase().includes(query)) {
+                        results.push({ isApp: true, isCategory: false, name: appName, comment: appComment, icon: app.icon || "application-x-executable", appObj: app, badge: "App" });
+                    }
+                }
+            }
+            return results;
+        }
+
+        // 2. Browse Mode: Show current category
+        if (activeCategory === "root") {
+            for (var r = 0; r < rootCategories.length; r++) {
+                var cat = rootCategories[r];
+                results.push({ isApp: false, isCategory: true, id: cat.id, name: cat.name, comment: cat.comment, icon: cat.icon, badge: "Submenu" });
+            }
+            return results;
+        }
+
+        if (activeCategory === "tools") {
+            for (var t2 = 0; t2 < toolActions.length; t2++) {
+                var tool2 = toolActions[t2];
+                results.push({ isApp: false, isCategory: false, name: tool2.name, comment: tool2.comment, icon: tool2.icon, exec: tool2.exec, badge: "" });
+            }
+            return results;
+        }
+
+        if (activeCategory === "system") {
+            for (var s2 = 0; s2 < systemActions.length; s2++) {
+                var sys2 = systemActions[s2];
+                results.push({ isApp: false, isCategory: false, name: sys2.name, comment: sys2.comment, icon: sys2.icon, exec: sys2.exec, badge: "" });
+            }
+            return results;
+        }
+
+        if (activeCategory === "apps") {
+            if (DesktopEntries && DesktopEntries.applications) {
+                var appsList = DesktopEntries.applications.values.slice();
+                appsList.sort((x, y) => (x.name || "").localeCompare(y.name || ""));
+                for (var a2 = 0; a2 < appsList.length; a2++) {
+                    var app2 = appsList[a2];
+                    if (!app2 || app2.nodisplay) continue;
+                    results.push({ isApp: true, isCategory: false, name: app2.name || "", comment: app2.comment || app2.genericName || "", icon: app2.icon || "application-x-executable", appObj: app2, badge: "" });
+                }
+            }
+            return results;
         }
 
         return results;
@@ -122,7 +206,9 @@ PanelWindow {
 
     function executeItem(item) {
         if (!item) return;
-        if (item.isApp && item.appObj) {
+        if (item.isCategory) {
+            menuWindow.drillDown(item.id);
+        } else if (item.isApp && item.appObj) {
             item.appObj.execute();
             menuWindow.close();
         } else if (item.exec) {
@@ -140,7 +226,7 @@ PanelWindow {
     Rectangle {
         id: modalBox
         width: 580
-        height: Math.min(520, Math.max(120, 68 + (resultsList.count * 48)))
+        height: Math.min(540, Math.max(140, 80 + (resultsList.count * 48)))
         anchors.centerIn: parent
         color: "#2e3440"
         border.color: "#4c566a"
@@ -148,7 +234,6 @@ PanelWindow {
         radius: 8
         clip: true
 
-        // Prevent clicks inside modal from closing
         MouseArea {
             anchors.fill: parent
             onClicked: (mouse) => mouse.accepted = true
@@ -159,10 +244,51 @@ PanelWindow {
             anchors.margins: 12
             spacing: 8
 
-            // Top Search Bar
+            // Header: Breadcrumb Path & Search Bar
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                // Back Button (shown if in submenu)
+                Rectangle {
+                    visible: menuWindow.activeCategory !== "root" && searchInput.text.length === 0
+                    width: 32
+                    height: 32
+                    radius: 4
+                    color: backMouseArea.containsMouse ? "#434c5e" : "#3b4252"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: ""
+                        color: "#88c0d0"
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 13
+                    }
+
+                    MouseArea {
+                        id: backMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: menuWindow.goBack()
+                    }
+                }
+
+                // Breadcrumb Title
+                Text {
+                    text: menuWindow.getBreadcrumbTitle()
+                    color: "#88c0d0"
+                    font.family: "JetBrainsMono Nerd Font"
+                    font.pixelSize: 13
+                    font.bold: true
+                    Layout.alignment: Qt.AlignVCenter
+                }
+            }
+
+            // Search Bar
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 40
+                Layout.preferredHeight: 38
                 color: "#3b4252"
                 radius: 6
                 border.color: searchInput.activeFocus ? "#88c0d0" : "#434c5e"
@@ -178,7 +304,7 @@ PanelWindow {
                         text: "󰍉"
                         color: "#88c0d0"
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 16
+                        font.pixelSize: 15
                     }
 
                     TextInput {
@@ -194,12 +320,16 @@ PanelWindow {
 
                         Text {
                             anchors.fill: parent
-                            text: "Search applications & actions..."
+                            text: menuWindow.activeCategory === "root" ? "Search all applications & actions..." : `Filter in ${menuWindow.getBreadcrumbTitle()}...`
                             color: "#d8dee9"
                             opacity: 0.4
                             font.family: searchInput.font.family
                             font.pixelSize: searchInput.font.pixelSize
                             visible: searchInput.text.length === 0
+                        }
+
+                        onTextChanged: {
+                            menuWindow.searchIndex = 0;
                         }
 
                         Keys.onDownPressed: {
@@ -217,14 +347,14 @@ PanelWindow {
                         }
 
                         Keys.onReturnPressed: {
-                            var items = menuWindow.getFilteredItems();
+                            var items = menuWindow.getDisplayItems();
                             if (items.length > 0 && menuWindow.searchIndex < items.length) {
                                 menuWindow.executeItem(items[menuWindow.searchIndex]);
                             }
                         }
 
                         Keys.onEscapePressed: {
-                            menuWindow.close();
+                            menuWindow.goBack();
                         }
                     }
                 }
@@ -238,7 +368,7 @@ PanelWindow {
                 clip: true
                 spacing: 2
 
-                model: menuWindow.getFilteredItems()
+                model: menuWindow.getDisplayItems()
 
                 delegate: Rectangle {
                     id: rowDelegate
@@ -256,6 +386,7 @@ PanelWindow {
                         anchors.rightMargin: 10
                         spacing: 10
 
+                        // Icon
                         Image {
                             width: 22
                             height: 22
@@ -273,7 +404,7 @@ PanelWindow {
                                 color: index === menuWindow.searchIndex ? "#88c0d0" : "#eceff4"
                                 font.family: "JetBrainsMono Nerd Font"
                                 font.pixelSize: 12
-                                font.bold: index === menuWindow.searchIndex
+                                font.bold: index === menuWindow.searchIndex || modelData.isCategory
                                 elide: Text.ElideRight
                                 Layout.fillWidth: true
                             }
@@ -288,6 +419,16 @@ PanelWindow {
                                 visible: modelData.comment !== ""
                                 Layout.fillWidth: true
                             }
+                        }
+
+                        // Badge / Arrow indicator
+                        Text {
+                            text: modelData.isCategory ? "" : (modelData.badge ? modelData.badge : "")
+                            color: modelData.isCategory ? "#88c0d0" : "#81a1c1"
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pixelSize: modelData.isCategory ? 12 : 10
+                            opacity: modelData.isCategory ? 0.8 : 0.6
+                            Layout.alignment: Qt.AlignVCenter
                         }
                     }
 

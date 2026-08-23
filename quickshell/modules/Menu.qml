@@ -13,11 +13,29 @@ PanelWindow {
     property var navHistory: []
     property int searchIndex: 0
 
+    property var existingVms: []
+
+    Process {
+        id: vmListProc
+        command: ["zsh", "-c", "cmd-vm list"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                let out = this.text.trim();
+                if (out.length > 0) {
+                    menuWindow.existingVms = out.split("\n").filter(v => v.trim().length > 0);
+                } else {
+                    menuWindow.existingVms = [];
+                }
+            }
+        }
+    }
+
     function open(category) {
         activeCategory = category || "root";
         navHistory = [];
         searchInput.text = "";
         searchIndex = 0;
+        vmListProc.running = true;
         isOpen = true;
         searchInput.forceActiveFocus();
     }
@@ -41,6 +59,9 @@ PanelWindow {
         activeCategory = categoryId;
         searchInput.text = "";
         searchIndex = 0;
+        if (categoryId === "vms" || categoryId === "vms-start" || categoryId === "vms-delete") {
+            vmListProc.running = true;
+        }
     }
 
     function goBack() {
@@ -78,6 +99,7 @@ PanelWindow {
         function apps(): void { menuWindow.toggle("apps"); }
         function actions(): void { menuWindow.toggle("actions"); }
         function setup(): void { menuWindow.toggle("setup"); }
+        function vms(): void { menuWindow.toggle("vms"); }
         function help(): void { menuWindow.toggle("help"); }
         function power(): void { menuWindow.toggle("system"); }
     }
@@ -92,10 +114,18 @@ PanelWindow {
         { id: "apps", name: "Apps", glyph: "󰀻", isCategory: true },
         { id: "actions", name: "Actions", glyph: "󱓞", isCategory: true },
         { id: "setup", name: "Setup", glyph: "", isCategory: true },
-        { id: "vms", name: "Virtual Machines", glyph: "", exec: "xdg-terminal-exec --app-id=dot.nix.manage-vms manage-vm" },
+        { id: "vms", name: "Virtual Machines", glyph: "", isCategory: true },
         { id: "webapp", name: "Web App", glyph: "", exec: "xdg-terminal-exec --app-id=dot.nix.install-webapp install-webapp" },
         { id: "help", name: "Help", glyph: "󰧑", isCategory: true },
         { id: "system", name: "System", glyph: "", isCategory: true }
+    ]
+
+    // Virtual Machines Submenu
+    readonly property var vmsItems: [
+        { id: "vms-curator", name: "VM-Curator", glyph: "󰪶", exec: "launch-or-focus-tui vm-curator" },
+        { id: "vms-lazydocker", name: "Lazydocker", glyph: "󰡨", exec: "launch-or-focus-tui lazydocker" },
+        { id: "vms-start", name: "Start VM", glyph: "", isCategory: true },
+        { id: "vms-delete", name: "Delete VM", glyph: "", isCategory: true }
     ]
 
     // Actions Submenu
@@ -146,6 +176,9 @@ PanelWindow {
         if (activeCategory === "apps") return "Apps";
         if (activeCategory === "actions") return "Actions";
         if (activeCategory === "setup") return "Setup";
+        if (activeCategory === "vms") return "Virtual Machines";
+        if (activeCategory === "vms-start") return "Start VM";
+        if (activeCategory === "vms-delete") return "Delete VM";
         if (activeCategory === "help") return "Help";
         if (activeCategory === "system") return "System";
         return "Menu";
@@ -157,14 +190,20 @@ PanelWindow {
 
         // 1. Search Mode: Match across all actions, setup items, help docs, and desktop applications
         if (query.length > 0) {
-            var pools = [actionItems, setupItems, helpItems, systemActions];
+            var pools = [actionItems, setupItems, helpItems, systemActions, vmsItems];
             for (var p = 0; p < pools.length; p++) {
                 var pool = pools[p];
                 for (var i = 0; i < pool.length; i++) {
                     var item = pool[i];
                     if (item.name.toLowerCase().includes(query)) {
-                        results.push({ isApp: false, isCategory: false, name: item.name, glyph: item.glyph, icon: "", exec: item.exec });
+                        results.push({ isApp: false, isCategory: item.isCategory === true, id: item.id || "", name: item.name, glyph: item.glyph, icon: "", exec: item.exec || "" });
                     }
+                }
+            }
+            for (var vmIdx = 0; vmIdx < existingVms.length; vmIdx++) {
+                var vmName = existingVms[vmIdx];
+                if (vmName.toLowerCase().includes(query)) {
+                    results.push({ isApp: false, isCategory: false, name: "Start " + vmName, glyph: "", icon: "", exec: "cmd-vm start '" + vmName + "'" });
                 }
             }
             if (DesktopEntries && DesktopEntries.applications) {
@@ -174,6 +213,8 @@ PanelWindow {
                     if (!app || app.nodisplay) continue;
                     var appName = app.name || "";
                     var appComment = app.comment || app.genericName || "";
+                    var appId = app.id || "";
+                    if (appName.toLowerCase().includes("vm-curator") || appName.toLowerCase() === "curator" || appId.toLowerCase().includes("vm-curator")) continue;
                     if (appName.toLowerCase().includes(query) || appComment.toLowerCase().includes(query)) {
                         results.push({ isApp: true, isCategory: false, name: appName, glyph: "", icon: app.icon || "application-x-executable", appObj: app });
                     }
@@ -187,6 +228,38 @@ PanelWindow {
             for (var r = 0; r < rootCategories.length; r++) {
                 var cat = rootCategories[r];
                 results.push({ isApp: false, isCategory: cat.isCategory === true, id: cat.id, name: cat.name, glyph: cat.glyph, icon: "", exec: cat.exec || "" });
+            }
+            return results;
+        }
+
+        if (activeCategory === "vms") {
+            for (var v1 = 0; v1 < vmsItems.length; v1++) {
+                var vm = vmsItems[v1];
+                results.push({ isApp: false, isCategory: vm.isCategory === true, id: vm.id, name: vm.name, glyph: vm.glyph, icon: "", exec: vm.exec || "" });
+            }
+            return results;
+        }
+
+        if (activeCategory === "vms-start") {
+            if (existingVms.length === 0) {
+                results.push({ isApp: false, isCategory: false, name: "No VMs found in ~/VMs", glyph: "", icon: "", exec: "" });
+            } else {
+                for (var vs = 0; vs < existingVms.length; vs++) {
+                    var vName = existingVms[vs];
+                    results.push({ isApp: false, isCategory: false, name: vName, glyph: "", icon: "", exec: "cmd-vm start '" + vName + "'" });
+                }
+            }
+            return results;
+        }
+
+        if (activeCategory === "vms-delete") {
+            if (existingVms.length === 0) {
+                results.push({ isApp: false, isCategory: false, name: "No VMs found in ~/VMs", glyph: "", icon: "", exec: "" });
+            } else {
+                for (var vd = 0; vd < existingVms.length; vd++) {
+                    var vdName = existingVms[vd];
+                    results.push({ isApp: false, isCategory: false, name: vdName, glyph: "", icon: "", exec: "cmd-vm delete-confirm '" + vdName + "'" });
+                }
             }
             return results;
         }
@@ -230,6 +303,9 @@ PanelWindow {
                 for (var a2 = 0; a2 < appsList.length; a2++) {
                     var app2 = appsList[a2];
                     if (!app2 || app2.nodisplay) continue;
+                    var aName = (app2.name || "").toLowerCase();
+                    var aId = (app2.id || "").toLowerCase();
+                    if (aName.includes("vm-curator") || aName === "curator" || aId.includes("vm-curator")) continue;
                     results.push({ isApp: true, isCategory: false, name: app2.name || "", glyph: "", icon: app2.icon || "application-x-executable", appObj: app2 });
                 }
             }

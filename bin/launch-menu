@@ -284,8 +284,54 @@ show_weather_remove_location_menu() {
 }
 
 show_vms_menu() {
-  transition_wait
-  xdg-terminal-exec --app-id=dot.nix.manage-vms manage-vm
+  local selection
+  selection=$(menu "Virtual Machines" "󰪶  VM-Curator\n󰡨  Lazydocker\n  Start VM\n  Delete VM")
+  case "$selection" in
+    *VM-Curator*) launch-or-focus-tui vm-curator ;;
+    *Lazydocker*) launch-or-focus-tui lazydocker ;;
+    *"Start VM"*) transition_wait; show_vm_start_menu ;;
+    *"Delete VM"*) transition_wait; show_vm_delete_menu ;;
+    *) back_to show_main_menu ;;
+  esac
+}
+
+show_vm_start_menu() {
+  local vms=()
+  for d in "$HOME/VMs"/*(/N); do
+    vms+=("  $(basename "$d")")
+  done
+  if [[ ${#vms} -eq 0 ]]; then
+    notify-send -a "Virtual Machines" "No VMs found in ~/VMs"
+    back_to show_vms_menu
+    return
+  fi
+  local selection
+  selection=$(menu "Start VM" "${(F)vms}")
+  if [[ -n "$selection" ]]; then
+    local vm_name="${selection#*  }"
+    cmd-vm start "$vm_name"
+  else
+    back_to show_vms_menu
+  fi
+}
+
+show_vm_delete_menu() {
+  local vms=()
+  for d in "$HOME/VMs"/*(/N); do
+    vms+=("  $(basename "$d")")
+  done
+  if [[ ${#vms} -eq 0 ]]; then
+    notify-send -a "Virtual Machines" "No VMs found in ~/VMs"
+    back_to show_vms_menu
+    return
+  fi
+  local selection
+  selection=$(menu "Delete VM" "${(F)vms}")
+  if [[ -n "$selection" ]]; then
+    local vm_name="${selection#*  }"
+    cmd-vm delete-confirm "$vm_name"
+  fi
+  back_to show_vms_menu
 }
 
 show_install_menu() {

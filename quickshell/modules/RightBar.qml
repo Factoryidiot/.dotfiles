@@ -16,6 +16,309 @@ RowLayout {
         Quickshell.execDetached(["zsh", "-c", cmd]);
     }
 
+    property var activeTrayItem: null
+    property var activeTrayAnchor: null
+    property bool trayMenuOpen: false
+
+    property var submenuStack: []
+    readonly property int submenuDepth: submenuStack.length
+    readonly property string currentSubmenuTitle: submenuDepth > 0 ? submenuStack[submenuDepth - 1].title : ""
+    readonly property var currentChildren: submenuDepth > 0
+        ? submenuStack[submenuDepth - 1].opener.children
+        : (trayMenuOpener.children ? trayMenuOpener.children.values : [])
+
+    property bool menuLevelSettling: false
+
+    Component {
+        id: submenuOpenerComponent
+        QsMenuOpener {}
+    }
+
+    Timer {
+        id: menuLevelSettleTimer
+        interval: 200
+        onTriggered: root.menuLevelSettling = false
+    }
+
+    function settleMenuLevel() {
+        menuLevelSettling = true;
+        menuLevelSettleTimer.restart();
+    }
+
+    function resetTrayMenu() {
+        menuLevelSettling = false;
+        menuLevelSettleTimer.stop();
+        if (trayMenuFlick) trayMenuFlick.contentY = 0;
+        var openers = submenuStack;
+        submenuStack = [];
+        for (var i = openers.length - 1; i >= 0; i--) {
+            if (openers[i].opener) openers[i].opener.destroy();
+        }
+    }
+
+    function enterSubmenu(entry, title) {
+        var opener = submenuOpenerComponent.createObject(root, { menu: entry });
+        if (!opener) return;
+        var stack = submenuStack.slice();
+        stack.push({ opener: opener, title: title });
+        submenuStack = stack;
+        settleMenuLevel();
+    }
+
+    function leaveSubmenu() {
+        if (submenuStack.length === 0) return;
+        var stack = submenuStack.slice();
+        var top = stack.pop();
+        submenuStack = stack;
+        if (top.opener) top.opener.destroy();
+        settleMenuLevel();
+    }
+
+    function openTrayMenu(item, anchorItem) {
+        if (root.trayMenuOpen && root.activeTrayItem === item) {
+            root.trayMenuOpen = false;
+            return;
+        }
+        root.resetTrayMenu();
+        root.activeTrayItem = item;
+        root.activeTrayAnchor = anchorItem;
+        root.trayMenuOpen = true;
+    }
+
+    QsMenuOpener {
+        id: trayMenuOpener
+        menu: root.activeTrayItem ? root.activeTrayItem.menu : null
+    }
+
+    // Floating Tray Menu Popup (styled with SwayOSD border & separator colors)
+    PopupWindow {
+        id: trayMenuPopup
+        anchor.window: root.bar
+        anchor.rect.x: root.activeTrayAnchor ? root.activeTrayAnchor.mapToItem(null, 0, 0).x : 0
+        anchor.rect.y: root.bar ? root.bar.height : 26
+        anchor.rect.width: root.activeTrayAnchor ? root.activeTrayAnchor.width : 20
+        anchor.rect.height: 1
+        anchor.edges: Edges.Bottom | Edges.Left
+        anchor.gravity: Edges.Bottom | Edges.Right
+
+        visible: root.trayMenuOpen && root.activeTrayItem !== null && (root.currentChildren ? (root.currentChildren.length > 0 || (root.currentChildren.values && root.currentChildren.values.length > 0)) : false)
+        color: "transparent"
+
+        onVisibleChanged: {
+            if (!visible) root.resetTrayMenu();
+        }
+
+        Rectangle {
+            id: menuContainer
+            width: 220
+            implicitHeight: Math.min(380, menuHeaderColumn.implicitHeight + (trayMenuFlick.contentHeight > 0 ? Math.min(320, trayMenuFlick.contentHeight) : 0) + 12)
+            color: "#2e3440"
+            border.color: "#d8dee9"
+            border.width: 1
+            radius: 6
+            clip: true
+
+            ColumnLayout {
+                id: menuMainLayout
+                anchors.fill: parent
+                anchors.margins: 4
+                spacing: 0
+
+                // Submenu Header (when drilled into a submenu)
+                ColumnLayout {
+                    id: menuHeaderColumn
+                    Layout.fillWidth: true
+                    visible: root.submenuDepth > 0
+                    spacing: 2
+
+                    Item {
+                        Layout.fillWidth: true
+                        implicitHeight: 28
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 4
+                            color: backMouse.containsMouse ? "#434c5e" : "transparent"
+                        }
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            anchors.leftMargin: 8
+                            text: "‹"
+                            color: "#88c0d0"
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+
+                        Text {
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            anchors.leftMargin: 24
+                            anchors.right: parent.right
+                            anchors.rightMargin: 8
+                            text: root.currentSubmenuTitle
+                            color: "#d8dee9"
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pixelSize: 11
+                            font.bold: true
+                            elide: Text.ElideRight
+                        }
+
+                        MouseArea {
+                            id: backMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (root.menuLevelSettling) return;
+                                if (trayMenuFlick) trayMenuFlick.contentY = 0;
+                                root.leaveSubmenu();
+                            }
+                        }
+                    }
+
+                    // Separator below header in SwayOSD border color
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.leftMargin: 6
+                        Layout.rightMargin: 6
+                        height: 1
+                        color: "#d8dee9"
+                        opacity: 0.35
+                    }
+                }
+
+                // Scrollable Item List
+                Flickable {
+                    id: trayMenuFlick
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    contentWidth: width
+                    contentHeight: trayMenuColumn.implicitHeight
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    interactive: contentHeight > height
+
+                    ColumnLayout {
+                        id: trayMenuColumn
+                        width: parent.width
+                        spacing: 1
+
+                        Repeater {
+                            model: root.currentChildren ? (root.currentChildren.values ? root.currentChildren.values : root.currentChildren) : []
+
+                            delegate: Item {
+                                id: menuRow
+                                required property var modelData
+                                required property int index
+
+                                readonly property string rowText: String(modelData.text || "")
+                                readonly property bool isSep: modelData.isSeparator || false
+                                readonly property bool hasKids: modelData.hasChildren || false
+                                readonly property bool isChecked: modelData.checkState === Qt.Checked || (modelData.checked === true)
+
+                                Layout.fillWidth: true
+                                implicitHeight: isSep ? 9 : 28
+                                visible: rowText !== "" || isSep
+                                opacity: (modelData.enabled !== false) ? 1.0 : 0.45
+
+                                // Separator line in SwayOSD border color
+                                Rectangle {
+                                    visible: menuRow.isSep
+                                    anchors.centerIn: parent
+                                    width: parent.width - 12
+                                    height: 1
+                                    color: "#d8dee9"
+                                    opacity: 0.35
+                                }
+
+                                // Hover background
+                                Rectangle {
+                                    visible: !menuRow.isSep
+                                    anchors.fill: parent
+                                    radius: 4
+                                    color: rowMouse.containsMouse && (modelData.enabled !== false) ? "#434c5e" : "transparent"
+                                }
+
+                                RowLayout {
+                                    visible: !menuRow.isSep
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 8
+                                    anchors.rightMargin: 8
+                                    spacing: 6
+
+                                    // Checkmark if checked
+                                    Text {
+                                        visible: menuRow.isChecked
+                                        text: ""
+                                        color: "#88c0d0"
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        font.pixelSize: 10
+                                    }
+
+                                    // Optional item icon
+                                    Image {
+                                        visible: String(menuRow.modelData.icon || "") !== ""
+                                        source: String(menuRow.modelData.icon || "")
+                                        sourceSize: Qt.size(14, 14)
+                                        Layout.preferredWidth: 14
+                                        Layout.preferredHeight: 14
+                                        fillMode: Image.PreserveAspectFit
+                                    }
+
+                                    // Label text in SwayOSD / tooltip color
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: menuRow.rowText
+                                        color: rowMouse.containsMouse ? "#88c0d0" : "#d8dee9"
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        font.pixelSize: 11
+                                        elide: Text.ElideRight
+                                    }
+
+                                    // Submenu chevron
+                                    Text {
+                                        visible: menuRow.hasKids
+                                        text: "›"
+                                        color: rowMouse.containsMouse ? "#88c0d0" : "#d8dee9"
+                                        font.family: "JetBrainsMono Nerd Font"
+                                        font.pixelSize: 13
+                                        font.bold: true
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: rowMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    enabled: !menuRow.isSep && (menuRow.modelData.enabled !== false)
+                                    cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+
+                                    onClicked: {
+                                        if (root.menuLevelSettling) return;
+                                        if (menuRow.hasKids) {
+                                            trayMenuFlick.contentY = 0;
+                                            root.enterSubmenu(menuRow.modelData, menuRow.rowText);
+                                        } else {
+                                            if (menuRow.modelData.trigger) {
+                                                menuRow.modelData.trigger();
+                                            } else if (menuRow.modelData.triggered) {
+                                                menuRow.modelData.triggered();
+                                            }
+                                            root.trayMenuOpen = false;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // 1. Collapsible System Tray Drawer
     RowLayout {
         id: traySection
@@ -114,14 +417,14 @@ RowLayout {
                             onClicked: mouse => {
                                 if (mouse.button === Qt.RightButton || trayDelegate.modelData.onlyMenu) {
                                     if (trayDelegate.modelData.hasMenu) {
-                                        var pt = trayDelegate.mapToItem(null, mouse.x, mouse.y);
-                                        trayDelegate.modelData.display(root.bar, pt.x, pt.y);
+                                        root.openTrayMenu(trayDelegate.modelData, trayDelegate);
                                     } else {
                                         trayDelegate.modelData.secondaryActivate();
                                     }
                                 } else if (mouse.button === Qt.MiddleButton) {
                                     trayDelegate.modelData.secondaryActivate();
                                 } else {
+                                    root.trayMenuOpen = false;
                                     trayDelegate.modelData.activate();
                                 }
                             }

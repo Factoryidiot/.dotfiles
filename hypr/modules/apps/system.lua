@@ -38,7 +38,7 @@ hl.window_rule({
     match = { class = "dot.nix.display-about" },
     float = true,
     center = true,
-    size = { 780, 440 }
+    size = { 800, 500 }
 })
 
 hl.window_rule({

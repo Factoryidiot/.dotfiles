@@ -1,1 +1,10 @@
 theme = ""
+
+[ytmusic]
+# Extract cookies from browser for zero-OAuth setup ("firefox", "chromium", "chrome", "brave")
+cookies_from = "firefox"
+expand_playlist = true
+
+# Optional: Google Cloud OAuth credentials (if not using browser cookies)
+# client_id = "your_client_id_here"
+# client_secret = "your_client_secret_here"

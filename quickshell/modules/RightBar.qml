@@ -93,13 +93,31 @@ RowLayout {
     // Floating Tray Menu Popup (styled with SwayOSD border & separator colors)
     PopupWindow {
         id: trayMenuPopup
-        anchor.window: root.bar
-        anchor.rect.x: root.activeTrayAnchor ? root.activeTrayAnchor.mapToItem(null, 0, 0).x : 0
-        anchor.rect.y: root.bar ? root.bar.height : 26
-        anchor.rect.width: root.activeTrayAnchor ? root.activeTrayAnchor.width : 20
-        anchor.rect.height: 1
-        anchor.edges: Edges.Bottom | Edges.Left
-        anchor.gravity: Edges.Bottom | Edges.Right
+
+        // Explicit surface dimensions for Wayland compositor
+        implicitWidth: 280
+        implicitHeight: menuContainer.implicitHeight
+
+        anchor {
+            id: trayPopupAnchor
+            window: root.bar
+            adjustment: PopupAdjustment.Slide
+            edges: Edges.Top | Edges.Left
+            gravity: Edges.Bottom | Edges.Right
+            rect.width: 1
+            rect.height: 1
+
+            onAnchoring: {
+                var target = root.activeTrayAnchor;
+                if (!target || !root.bar) return;
+                var popupW = trayMenuPopup.implicitWidth;
+                var point = root.bar.contentItem.mapFromItem(target, 0, 0);
+                var posX = Math.round(point.x + target.width - popupW);
+                var posY = Math.round(root.bar.height + 6);
+                trayPopupAnchor.rect.x = Math.max(10, posX);
+                trayPopupAnchor.rect.y = posY;
+            }
+        }
 
         visible: root.trayMenuOpen && root.activeTrayItem !== null && (root.currentChildren ? (root.currentChildren.length > 0 || (root.currentChildren.values && root.currentChildren.values.length > 0)) : false)
         color: "transparent"
@@ -110,8 +128,8 @@ RowLayout {
 
         Rectangle {
             id: menuContainer
-            width: 220
-            implicitHeight: Math.min(380, menuHeaderColumn.implicitHeight + (trayMenuFlick.contentHeight > 0 ? Math.min(320, trayMenuFlick.contentHeight) : 0) + 12)
+            width: 280
+            implicitHeight: Math.min(450, menuHeaderColumn.implicitHeight + (trayMenuColumn.implicitHeight > 0 ? Math.min(380, trayMenuColumn.implicitHeight) : 40) + 16)
             color: "#2e3440"
             border.color: "#d8dee9"
             border.width: 1
@@ -121,7 +139,7 @@ RowLayout {
             ColumnLayout {
                 id: menuMainLayout
                 anchors.fill: parent
-                anchors.margins: 4
+                anchors.margins: 6
                 spacing: 0
 
                 // Submenu Header (when drilled into a submenu)
@@ -133,7 +151,7 @@ RowLayout {
 
                     Item {
                         Layout.fillWidth: true
-                        implicitHeight: 28
+                        implicitHeight: 30
 
                         Rectangle {
                             anchors.fill: parent
@@ -148,20 +166,20 @@ RowLayout {
                             text: "‹"
                             color: "#88c0d0"
                             font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: 14
+                            font.pixelSize: 16
                             font.bold: true
                         }
 
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
                             anchors.left: parent.left
-                            anchors.leftMargin: 24
+                            anchors.leftMargin: 26
                             anchors.right: parent.right
                             anchors.rightMargin: 8
                             text: root.currentSubmenuTitle
-                            color: "#d8dee9"
+                            color: "#eceff4"
                             font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: 11
+                            font.pixelSize: 12
                             font.bold: true
                             elide: Text.ElideRight
                         }
@@ -194,7 +212,7 @@ RowLayout {
                 Flickable {
                     id: trayMenuFlick
                     Layout.fillWidth: true
-                    Layout.fillHeight: true
+                    Layout.preferredHeight: Math.min(380, trayMenuColumn.implicitHeight)
                     contentWidth: width
                     contentHeight: trayMenuColumn.implicitHeight
                     clip: true
@@ -204,7 +222,7 @@ RowLayout {
                     ColumnLayout {
                         id: trayMenuColumn
                         width: parent.width
-                        spacing: 1
+                        spacing: 2
 
                         Repeater {
                             model: root.currentChildren || []
@@ -220,7 +238,7 @@ RowLayout {
                                 readonly property bool isChecked: modelData.checkState === Qt.Checked || (modelData.checked === true)
 
                                 Layout.fillWidth: true
-                                implicitHeight: isSep ? 9 : 28
+                                implicitHeight: isSep ? 8 : 30
                                 visible: rowText !== "" || isSep
                                 opacity: (modelData.enabled !== false) ? 1.0 : 0.45
 
@@ -247,7 +265,7 @@ RowLayout {
                                     anchors.fill: parent
                                     anchors.leftMargin: 8
                                     anchors.rightMargin: 8
-                                    spacing: 6
+                                    spacing: 8
 
                                     // Checkmark if checked
                                     Text {
@@ -255,7 +273,7 @@ RowLayout {
                                         text: ""
                                         color: "#88c0d0"
                                         font.family: "JetBrainsMono Nerd Font"
-                                        font.pixelSize: 10
+                                        font.pixelSize: 11
                                     }
 
                                     // Optional item icon
@@ -274,7 +292,7 @@ RowLayout {
                                         text: menuRow.rowText
                                         color: rowMouse.containsMouse ? "#88c0d0" : "#d8dee9"
                                         font.family: "JetBrainsMono Nerd Font"
-                                        font.pixelSize: 11
+                                        font.pixelSize: 12
                                         elide: Text.ElideRight
                                     }
 
@@ -284,7 +302,7 @@ RowLayout {
                                         text: "›"
                                         color: rowMouse.containsMouse ? "#88c0d0" : "#d8dee9"
                                         font.family: "JetBrainsMono Nerd Font"
-                                        font.pixelSize: 13
+                                        font.pixelSize: 14
                                         font.bold: true
                                     }
                                 }

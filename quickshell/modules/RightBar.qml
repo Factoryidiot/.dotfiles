@@ -90,12 +90,28 @@ RowLayout {
         menu: root.activeTrayItem ? root.activeTrayItem.menu : null
     }
 
+    function getOptimalTrayWidth() {
+        let items = root.currentChildren;
+        if (!items || items.length === 0) return 220;
+        let maxLen = 0;
+        for (let i = 0; i < items.length; i++) {
+            let txt = String(items[i].text || "");
+            if (txt.length > maxLen) maxLen = txt.length;
+        }
+        if (root.submenuDepth > 0 && root.currentSubmenuTitle.length > maxLen) {
+            maxLen = root.currentSubmenuTitle.length;
+        }
+        // Omarchy baseline (~232px) scaled dynamically to text content
+        let est = 52 + Math.round(maxLen * 7.5);
+        return Math.max(180, Math.min(250, est));
+    }
+
     // Floating Tray Menu Popup (styled with SwayOSD border & separator colors)
     PopupWindow {
         id: trayMenuPopup
 
-        // Explicit surface dimensions for Wayland compositor
-        implicitWidth: 280
+        // Explicit surface dimensions for Wayland compositor (dynamically fitted)
+        implicitWidth: root.getOptimalTrayWidth()
         implicitHeight: menuContainer.implicitHeight
 
         anchor {
@@ -128,8 +144,8 @@ RowLayout {
 
         Rectangle {
             id: menuContainer
-            width: 280
-            implicitHeight: Math.min(450, menuHeaderColumn.implicitHeight + (trayMenuColumn.implicitHeight > 0 ? Math.min(380, trayMenuColumn.implicitHeight) : 40) + 16)
+            width: root.getOptimalTrayWidth()
+            implicitHeight: Math.min(420, (menuHeaderColumn.visible ? menuHeaderColumn.implicitHeight : 0) + (trayMenuColumn.implicitHeight > 0 ? trayMenuColumn.implicitHeight : 30) + 12)
             color: "#2e3440"
             border.color: "#d8dee9"
             border.width: 1

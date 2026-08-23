@@ -810,6 +810,13 @@ RowLayout {
         }
     }
 
+    // 7. Weather Popup
+    WeatherPopup {
+        id: weatherPopup
+        bar: root.bar
+        anchorTarget: weatherBtn
+    }
+
     // 7. Weather Module (placed beside clock)
     Item {
         id: weatherModule
@@ -846,11 +853,12 @@ RowLayout {
         IconButton {
             id: weatherBtn
             iconText: weatherModule.weatherIcon
-            color: "#d8dee9"
-            tooltipText: weatherModule.weatherTooltip
+            color: weatherPopup.isOpen ? "#88c0d0" : "#d8dee9"
+            isActive: weatherPopup.isOpen
+            tooltipText: weatherPopup.isOpen ? "Close weather" : (weatherModule.weatherTooltip + "\nLeft-click: Weather details\nRight-click: Full report")
             paddingHorizontal: 3
 
-            onClicked: weatherProc.running = true
+            onClicked: weatherPopup.toggle()
             onRightClicked: root.runCmd("launch-weather-report")
         }
     }

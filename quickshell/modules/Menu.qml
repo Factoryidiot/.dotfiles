@@ -101,6 +101,7 @@ PanelWindow {
         function setup(): void { menuWindow.toggle("setup"); }
         function vms(): void { menuWindow.toggle("vms"); }
         function help(): void { menuWindow.toggle("help"); }
+        function about(): void { Quickshell.execDetached(["zsh", "-c", "display-about"]); menuWindow.close(); }
         function power(): void { menuWindow.toggle("system"); }
     }
 
@@ -116,6 +117,7 @@ PanelWindow {
         { id: "setup", name: "Setup", glyph: "", isCategory: true },
         { id: "vms", name: "Virtual Machines", glyph: "", isCategory: true },
         { id: "webapp", name: "Web App", glyph: "", exec: "xdg-terminal-exec --app-id=dot.nix.install-webapp install-webapp" },
+        { id: "about", name: "About", glyph: "󰋽", exec: "display-about" },
         { id: "help", name: "Help", glyph: "󰧑", isCategory: true },
         { id: "system", name: "System", glyph: "", isCategory: true }
     ]
@@ -154,6 +156,7 @@ PanelWindow {
 
     // Help & Docs Submenu
     readonly property var helpItems: [
+        { id: "help-about", name: "About This System (Fastfetch)", glyph: "󰋽", exec: "display-about" },
         { id: "help-keybindings", name: "Keybindings Reference", glyph: "", exec: "launch-or-focus-tui display-keybindings" },
         { id: "help-homemanager", name: "Home-Manager Options", glyph: "", exec: "launch-webapp 'https://home-manager-options.extranix.com/'" },
         { id: "help-hyprland", name: "Hyprland Wiki", glyph: "", exec: "launch-webapp 'https://wiki.hypr.land/'" },

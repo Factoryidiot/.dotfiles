@@ -136,13 +136,16 @@ PopupWindow {
         return grid;
     }
 
-    anchor.window: root.bar
-    anchor.rect.x: root.anchorTarget ? root.anchorTarget.mapToItem(null, 0, 0).x - 140 : 0
-    anchor.rect.y: root.bar ? root.bar.height : 26
-    anchor.rect.width: root.anchorTarget ? root.anchorTarget.width : 20
-    anchor.rect.height: 1
-    anchor.edges: Edges.Bottom | Edges.Left
-    anchor.gravity: Edges.Bottom | Edges.Right
+    anchor {
+        window: root.bar
+        adjustment: PopupAdjustment.Slide
+        edges: Edges.Bottom | Edges.Right
+        gravity: Edges.Bottom | Edges.Left
+        rect.x: root.anchorTarget ? root.anchorTarget.mapToItem(null, 0, 0).x : 0
+        rect.y: root.bar ? root.bar.height : 26
+        rect.width: root.anchorTarget ? root.anchorTarget.width : 20
+        rect.height: 1
+    }
 
     visible: root.isOpen
     color: "transparent"

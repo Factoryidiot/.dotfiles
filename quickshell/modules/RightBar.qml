@@ -859,14 +859,14 @@ RowLayout {
     CalendarPopup {
         id: calPopup
         bar: root.bar
-        anchorTarget: clockRow
+        anchorTarget: clockBtn
     }
 
     // 8. Clock & Calendar Module
     Item {
         id: clockModule
-        implicitWidth: clockRow.implicitWidth
-        implicitHeight: clockRow.implicitHeight
+        implicitWidth: clockBtn.implicitWidth
+        implicitHeight: clockBtn.implicitHeight
 
         property bool showAltFormat: false
         property var dateObj: new Date()
@@ -887,34 +887,17 @@ RowLayout {
             }
         }
 
-        RowLayout {
-            id: clockRow
-            spacing: 2
+        IconButton {
+            id: clockBtn
+            text: clockModule.getClockText()
+            color: calPopup.isOpen ? "#88c0d0" : "#d8dee9"
+            isActive: calPopup.isOpen
+            tooltipText: (calPopup.isOpen ? "Close calendar" : "Open calendar") + 
+                "\nRight-click: Switch format (" + (clockModule.showAltFormat ? "Time" : "Date") + ")"
+            paddingHorizontal: 5
 
-            // Calendar Icon Button (toggles Omarchy-style calendar)
-            IconButton {
-                id: calIconBtn
-                iconText: "󰃭"
-                color: calPopup.isOpen ? "#88c0d0" : "#81a1c1"
-                tooltipText: calPopup.isOpen ? "Close calendar" : "Open calendar"
-                paddingHorizontal: 3
-
-                onClicked: calPopup.toggle()
-            }
-
-            // Date / Time Text (toggles between Time and Date on click)
-            IconButton {
-                id: clockBtn
-                text: clockModule.getClockText()
-                color: "#d8dee9"
-                tooltipText: clockModule.showAltFormat ? 
-                    "Time: " + Qt.formatDateTime(clockModule.dateObj, "dddd HH:mm") + "\nLeft-click: Switch to time\nRight-click: Timezones" :
-                    "Date: " + Qt.formatDateTime(clockModule.dateObj, "dd MMMM yyyy") + "\nLeft-click: Switch to date\nRight-click: Timezones"
-                paddingHorizontal: 4
-
-                onClicked: clockModule.showAltFormat = !clockModule.showAltFormat
-                onRightClicked: root.runCmd("launch-floating-terminal-with-presentation tz-select")
-            }
+            onClicked: calPopup.toggle()
+            onRightClicked: clockModule.showAltFormat = !clockModule.showAltFormat
         }
     }
 }

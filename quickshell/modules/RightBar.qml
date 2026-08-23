@@ -23,8 +23,8 @@ RowLayout {
     property var submenuStack: []
     readonly property int submenuDepth: submenuStack.length
     readonly property string currentSubmenuTitle: submenuDepth > 0 ? submenuStack[submenuDepth - 1].title : ""
-    readonly property var currentChildren: submenuDepth > 0
-        ? submenuStack[submenuDepth - 1].opener.children
+    readonly property var currentChildren: root.submenuDepth > 0
+        ? (root.submenuStack[root.submenuDepth - 1].opener && root.submenuStack[root.submenuDepth - 1].opener.children ? root.submenuStack[root.submenuDepth - 1].opener.children.values : [])
         : (trayMenuOpener.children ? trayMenuOpener.children.values : [])
 
     property bool menuLevelSettling: false
@@ -207,7 +207,7 @@ RowLayout {
                         spacing: 1
 
                         Repeater {
-                            model: root.currentChildren ? (root.currentChildren.values ? root.currentChildren.values : root.currentChildren) : []
+                            model: root.currentChildren || []
 
                             delegate: Item {
                                 id: menuRow

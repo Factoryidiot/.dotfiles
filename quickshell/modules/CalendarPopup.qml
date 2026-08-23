@@ -199,7 +199,7 @@ PopupWindow {
                 // Year Progress Badge
                 ColumnLayout {
                     spacing: 2
-                    alignment: Qt.AlignRight
+                    Layout.alignment: Qt.AlignRight
 
                     Text {
                         text: `Year: ${root.getYearProgress()}%`

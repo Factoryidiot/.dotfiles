@@ -1,13 +1,7 @@
 #!/usr/bin/env zsh
 
 VM_DIR="${VM_DIR:-$HOME/VMs}"
-ISO_DIR="${ISO_DIR:-$HOME/Downloads/ISO}"
-BIOS_DIR="${BIOS_DIR:-$HOME/Downloads/BIOS}"
-SHARED_DIR="${SHARED_DIR:-$HOME/Public}"
 
-detect_gpu() {
-    [ -e "/dev/dri/renderD128" ] && echo "/dev/dri/renderD128" || echo "/dev/dri/renderD129"
-}
 
 list_vms() {
     for d in "$VM_DIR"/*(/N); do
@@ -36,74 +30,14 @@ start_vm() {
         return 0
     fi
 
-    # 2. Legacy manage-vm vm.conf format
-    if [[ -f "$vm_path/vm.conf" ]]; then
-        source "$vm_path/vm.conf"
-        local VARS_PATH="$vm_path/OVMF_VARS.fd"
-        local VARS_TEMPLATE="$BIOS_DIR/OVMF_VARS_4M.secboot.fd"
-        local RENDER_NODE=$(detect_gpu)
-        local TPM_STATE_DIR="$vm_path/tpm"
-        local TPM_SOCK_PATH="$TPM_STATE_DIR/swtpm-sock"
-        local DRIVER_ISO="$ISO_DIR/virtio-win.iso"
-
-        mkdir -p "$TPM_STATE_DIR"
-        [[ ! -f "$VARS_PATH" && -f "$VARS_TEMPLATE" ]] && cp "$VARS_TEMPLATE" "$VARS_PATH"
-
-        pkill -f "swtpm.*$vm_name" 2>/dev/null
-        rm -f "$TPM_SOCK_PATH"
-        swtpm socket --tpm2 --tpmstate "dir=$TPM_STATE_DIR" \
-            --ctrl "type=unixio,path=$TPM_SOCK_PATH" --terminate --daemon
-
-        local qemu_cmd=("qemu-system-x86_64"
-            -name "$VM_NAME" -m "$VM_MEM" -smp "$VM_CPUS"
-            -object "memory-backend-memfd,id=mem1,size=${VM_MEM}M,share=on"
-            -machine "q35,accel=kvm,memory-backend=mem1"
-            -cpu host
-        )
-
-        [[ -f "$BIOS_DIR/OVMF_CODE_4M.secboot.fd" ]] && qemu_cmd+=(-drive "if=pflash,format=raw,readonly=on,file=$BIOS_DIR/OVMF_CODE_4M.secboot.fd")
-        [[ -f "$VARS_PATH" ]] && qemu_cmd+=(-drive "if=pflash,format=raw,file=$VARS_PATH")
-
-        qemu_cmd+=(
-            -chardev "socket,id=chrtpm,path=$TPM_SOCK_PATH" -tpmdev "emulator,id=tpm0,chardev=chrtpm" -device "tpm-tis,tpmdev=tpm0"
-            -device "virtio-vga-gl,max_outputs=1" -display "spice-app,gl=on"
-            -spice "gl=on,rendernode=$RENDER_NODE,disable-ticketing=on"
-            -device "virtio-serial-pci" -chardev "spicevmc,id=spicechannel0,name=vdagent" -device "virtserialport,chardev=spicechannel0,name=com.redhat.spice.0"
-            -audiodev "pa,id=sound" -device "ich9-intel-hda" -device "hda-duplex,audiodev=sound"
-            -netdev "user,id=net0" -device "virtio-net-pci,netdev=net0"
-            -device "qemu-xhci,id=usb-bus" -device "usb-tablet"
-            -virtfs "local,path=$SHARED_DIR,mount_tag=hostshare,security_model=mapped-xattr,id=fsdev0"
-            -device "ahci,id=sata0"
-            -device "virtio-scsi-pci,id=scsi0"
-        )
-
-        if [[ ( "${VM_NAME:l}" == *win* || "${VM_PROFILE:l}" == *win* ) && -f "$DRIVER_ISO" ]]; then
-            qemu_cmd+=(
-                -drive "file=$DRIVER_ISO,media=cdrom,readonly=on,if=none,id=drive-cd1"
-                -device "ide-cd,bus=sata0.1,drive=drive-cd1,bootindex=2"
-            )
-        fi
-
-        if [[ -f "$VM_DISK_PATH" ]]; then
-            qemu_cmd+=(
-                -drive "file=$VM_DISK_PATH,if=none,format=qcow2,id=drive-hd0"
-                -device "scsi-hd,bus=scsi0.0,drive=drive-hd0,bootindex=1"
-            )
-        fi
-
-        notify-send -a "Virtual Machines" -i "computer" "Virtual Machine" "Launching $vm_name..."
-        setsid "${qemu_cmd[@]}" >/dev/null 2>&1 &!
-        return 0
-    fi
-
-    # 3. Fallback to vm-curator launch
+    # 2. vm-curator CLI launch
     if command -v vm-curator &>/dev/null; then
         notify-send -a "Virtual Machines" -i "computer" "Virtual Machine" "Launching $vm_name via vm-curator..."
         setsid vm-curator launch "$vm_name" >/dev/null 2>&1 &!
         return 0
     fi
 
-    notify-send -a "Virtual Machines" -u critical "VM Error" "No launch.sh or config found for $vm_name"
+    notify-send -a "Virtual Machines" -u critical "VM Error" "No launch.sh found for $vm_name in $VM_DIR"
     return 1
 }
 

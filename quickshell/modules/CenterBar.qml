@@ -50,15 +50,15 @@ RowLayout {
                 paddingVertical: 1
 
                 onClicked: {
-                    Hyprland.dispatch("workspace " + wsDelegate.wsId);
+                    Hyprland.dispatch("hl.dsp.focus({ workspace = " + wsDelegate.wsId + " })");
                 }
 
                 onScrollUp: {
-                    Hyprland.dispatch("workspace e-1");
+                    Hyprland.dispatch("hl.dsp.focus({ workspace = 'e-1' })");
                 }
 
                 onScrollDown: {
-                    Hyprland.dispatch("workspace e+1");
+                    Hyprland.dispatch("hl.dsp.focus({ workspace = 'e+1' })");
                 }
             }
         }

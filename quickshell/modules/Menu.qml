@@ -169,7 +169,7 @@ PanelWindow {
         { id: "action-suspend", name: "Suspend", glyph: "󰒲", exec: "systemctl suspend" },
         { id: "action-reboot", name: "Reboot", glyph: "󰜉", exec: "systemctl reboot" },
         { id: "action-shutdown", name: "Shutdown", glyph: "󰐥", exec: "systemctl poweroff" },
-        { id: "action-logout", name: "Log Out", glyph: "󰍃", exec: "hyprctl dispatch exit" }
+        { id: "action-logout", name: "Log Out", glyph: "󰍃", exec: "hyprctl dispatch 'hl.dsp.exit()'" }
     ]
 
     function getBreadcrumbTitle() {

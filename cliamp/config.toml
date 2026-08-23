@@ -1,5 +1,7 @@
 theme = ""
 
+eq_preset = "Custom"
+eq = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 [ytmusic]
 # Extract cookies from browser for zero-OAuth setup ("firefox", "chromium", "chrome", "brave")
 cookies_from = "firefox"

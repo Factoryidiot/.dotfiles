@@ -142,18 +142,19 @@ RowLayout {
         onClicked: root.runCmd("launch-or-focus-tui btop")
     }
 
-    // 3. Music Player (cliamp)
+    // 3. Music Player (cliamp) - only visible when audio is playing
     Item {
         id: musicModule
-        implicitWidth: musicBtn.implicitWidth
-        implicitHeight: musicBtn.implicitHeight
+        visible: isPlaying
+        implicitWidth: visible ? musicBtn.implicitWidth : 0
+        implicitHeight: visible ? musicBtn.implicitHeight : 0
 
         property string trackInfo: ""
         property bool isPlaying: false
 
         Process {
             id: playerProc
-            command: ["zsh", "-c", "status=$(playerctl status 2>/dev/null); if [[ $status == 'Playing' || $status == 'Paused' ]]; then artist=$(playerctl metadata artist 2>/dev/null); title=$(playerctl metadata title 2>/dev/null); echo \"$status|$artist|$title\"; else echo 'Stopped'; fi"]
+            command: ["zsh", "-c", "status=$(playerctl status 2>/dev/null); if [[ $status == 'Playing' ]]; then artist=$(playerctl metadata artist 2>/dev/null); title=$(playerctl metadata title 2>/dev/null); echo \"$status|$artist|$title\"; else echo 'Stopped'; fi"]
             running: true
             stdout: StdioCollector {
                 onStreamFinished: {
@@ -164,12 +165,6 @@ RowLayout {
                         let artist = parts[1] || "";
                         let title = parts[2] || "";
                         musicModule.trackInfo = (artist.length > 0 ? artist + " - " : "") + title;
-                    } else if (out.startsWith("Paused")) {
-                        musicModule.isPlaying = false;
-                        let parts = out.split("|");
-                        let artist = parts[1] || "";
-                        let title = parts[2] || "";
-                        musicModule.trackInfo = "[Paused] " + (artist.length > 0 ? artist + " - " : "") + title;
                     } else {
                         musicModule.isPlaying = false;
                         musicModule.trackInfo = "";
@@ -179,7 +174,7 @@ RowLayout {
         }
 
         Timer {
-            interval: 3000
+            interval: 2000
             running: true
             repeat: true
             onTriggered: playerProc.running = true
@@ -188,7 +183,7 @@ RowLayout {
         IconButton {
             id: musicBtn
             iconText: ""
-            color: musicModule.isPlaying ? "#88c0d0" : "#d8dee9"
+            color: "#88c0d0"
             tooltipText: musicModule.trackInfo !== "" ? 
                 `Music Player (cliamp)\n${musicModule.trackInfo}\nLeft-click: Open Player\nRight-click: Play / Pause` :
                 "Music Player (cliamp)\nLeft-click: Open Player\nRight-click: Play / Pause"

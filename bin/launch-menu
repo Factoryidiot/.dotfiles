@@ -53,8 +53,9 @@ show_help_menu() {
 
 show_actions_menu() {
   local selection
-  selection=$(menu "Actions" "  Capture\n  Share\n󰔎  Toggle")
+  selection=$(menu "Actions" "  Music\n  Capture\n  Share\n󰔎  Toggle")
   case "$selection" in
+    *Music*) launch-or-focus-tui cliamp ;;
     *Capture*) transition_wait; show_capture_menu ;;
     *Share*) transition_wait; show_share_menu ;;
     *Toggle*) transition_wait; show_toggle_menu ;;

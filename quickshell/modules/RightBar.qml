@@ -142,7 +142,67 @@ RowLayout {
         onClicked: root.runCmd("launch-or-focus-tui btop")
     }
 
-    // 3. Bluetooth Module
+    // 3. Music Player (cliamp)
+    Item {
+        id: musicModule
+        implicitWidth: musicBtn.implicitWidth
+        implicitHeight: musicBtn.implicitHeight
+
+        property string trackInfo: ""
+        property bool isPlaying: false
+
+        Process {
+            id: playerProc
+            command: ["zsh", "-c", "status=$(playerctl status 2>/dev/null); if [[ $status == 'Playing' || $status == 'Paused' ]]; then artist=$(playerctl metadata artist 2>/dev/null); title=$(playerctl metadata title 2>/dev/null); echo \"$status|$artist|$title\"; else echo 'Stopped'; fi"]
+            running: true
+            stdout: StdioCollector {
+                onStreamFinished: {
+                    let out = this.text.trim();
+                    if (out.startsWith("Playing")) {
+                        musicModule.isPlaying = true;
+                        let parts = out.split("|");
+                        let artist = parts[1] || "";
+                        let title = parts[2] || "";
+                        musicModule.trackInfo = (artist.length > 0 ? artist + " - " : "") + title;
+                    } else if (out.startsWith("Paused")) {
+                        musicModule.isPlaying = false;
+                        let parts = out.split("|");
+                        let artist = parts[1] || "";
+                        let title = parts[2] || "";
+                        musicModule.trackInfo = "[Paused] " + (artist.length > 0 ? artist + " - " : "") + title;
+                    } else {
+                        musicModule.isPlaying = false;
+                        musicModule.trackInfo = "";
+                    }
+                }
+            }
+        }
+
+        Timer {
+            interval: 3000
+            running: true
+            repeat: true
+            onTriggered: playerProc.running = true
+        }
+
+        IconButton {
+            id: musicBtn
+            iconText: ""
+            color: musicModule.isPlaying ? "#88c0d0" : "#d8dee9"
+            tooltipText: musicModule.trackInfo !== "" ? 
+                `Music Player (cliamp)\n${musicModule.trackInfo}\nLeft-click: Open Player\nRight-click: Play / Pause` :
+                "Music Player (cliamp)\nLeft-click: Open Player\nRight-click: Play / Pause"
+            paddingHorizontal: 3
+
+            onClicked: root.runCmd("launch-or-focus-tui cliamp")
+            onRightClicked: {
+                root.runCmd("playerctl play-pause 2>/dev/null");
+                playerProc.running = true;
+            }
+        }
+    }
+
+    // 4. Bluetooth Module
     Item {
         id: btModule
         implicitWidth: btBtn.implicitWidth

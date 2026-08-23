@@ -17,6 +17,10 @@ PopupWindow {
 
     readonly property bool viewingCurrentMonth: viewYear === today.getFullYear() && viewMonth === today.getMonth()
 
+    // Explicit dimensions on the window so Wayland allocates full surface bounds
+    implicitWidth: 380
+    implicitHeight: container.implicitHeight
+
     Timer {
         interval: 1000
         running: root.isOpen
@@ -137,14 +141,25 @@ PopupWindow {
     }
 
     anchor {
+        id: popupAnchor
         window: root.bar
         adjustment: PopupAdjustment.Slide
-        edges: Edges.Bottom | Edges.Right
-        gravity: Edges.Bottom | Edges.Left
-        rect.x: root.anchorTarget ? root.anchorTarget.mapToItem(null, 0, 0).x : 0
-        rect.y: root.bar ? root.bar.height : 26
-        rect.width: root.anchorTarget ? root.anchorTarget.width : 20
+        edges: Edges.Top | Edges.Left
+        gravity: Edges.Bottom | Edges.Right
+        rect.width: 1
         rect.height: 1
+
+        onAnchoring: {
+            var target = root.anchorTarget;
+            if (!target || !root.bar) return;
+            var popupW = root.implicitWidth;
+            var point = root.bar.contentItem.mapFromItem(target, 0, 0);
+            // Align right edge of popup with right edge of target, with screen padding
+            var posX = Math.round(point.x + target.width - popupW);
+            var posY = Math.round(root.bar.height + 6);
+            popupAnchor.rect.x = Math.max(10, posX);
+            popupAnchor.rect.y = posY;
+        }
     }
 
     visible: root.isOpen
@@ -152,8 +167,8 @@ PopupWindow {
 
     Rectangle {
         id: container
-        width: 320
-        implicitHeight: mainLayout.implicitHeight + 20
+        width: 380
+        implicitHeight: mainLayout.implicitHeight + 24
         color: "#2e3440"
         border.color: "#d8dee9"
         border.width: 1
@@ -163,8 +178,8 @@ PopupWindow {
         ColumnLayout {
             id: mainLayout
             anchors.fill: parent
-            anchors.margins: 12
-            spacing: 10
+            anchors.margins: 14
+            spacing: 12
 
             // 1. Hero Header Section
             RowLayout {
@@ -175,12 +190,12 @@ PopupWindow {
                     text: "󰃭"
                     color: "#88c0d0"
                     font.family: "JetBrainsMono Nerd Font"
-                    font.pixelSize: 32
+                    font.pixelSize: 34
                 }
 
                 ColumnLayout {
                     Layout.fillWidth: true
-                    spacing: 1
+                    spacing: 2
 
                     Text {
                         text: Qt.formatDate(root.today, "dddd, MMMM d")
@@ -194,14 +209,14 @@ PopupWindow {
                         text: Qt.formatDateTime(root.today, "HH:mm:ss")
                         color: "#88c0d0"
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 16
+                        font.pixelSize: 17
                         font.bold: true
                     }
                 }
 
                 // Year Progress Badge
                 ColumnLayout {
-                    spacing: 2
+                    spacing: 3
                     Layout.alignment: Qt.AlignRight
 
                     Text {
@@ -213,15 +228,15 @@ PopupWindow {
                     }
 
                     Rectangle {
-                        width: 70
-                        height: 5
-                        radius: 2
+                        width: 76
+                        height: 6
+                        radius: 3
                         color: "#3b4252"
 
                         Rectangle {
                             width: Math.round(parent.width * (root.getYearProgress() / 100))
                             height: parent.height
-                            radius: 2
+                            radius: 3
                             color: "#81a1c1"
                         }
                     }
@@ -243,8 +258,8 @@ PopupWindow {
 
                 // Prev Month Button
                 Rectangle {
-                    width: 24
-                    height: 24
+                    width: 26
+                    height: 26
                     radius: 4
                     color: prevMouse.containsMouse ? "#434c5e" : "transparent"
 
@@ -253,7 +268,7 @@ PopupWindow {
                         text: "‹"
                         color: "#88c0d0"
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 16
+                        font.pixelSize: 18
                         font.bold: true
                     }
 
@@ -269,14 +284,14 @@ PopupWindow {
                 // Month & Year Label (clickable to reset to today)
                 Item {
                     Layout.fillWidth: true
-                    implicitHeight: 24
+                    implicitHeight: 26
 
                     Text {
                         anchors.centerIn: parent
                         text: `${root.getMonthName(root.viewMonth)} ${root.viewYear}`
                         color: monthMouse.containsMouse ? "#88c0d0" : "#eceff4"
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 13
+                        font.pixelSize: 14
                         font.bold: true
                     }
 
@@ -291,8 +306,8 @@ PopupWindow {
 
                 // Next Month Button
                 Rectangle {
-                    width: 24
-                    height: 24
+                    width: 26
+                    height: 26
                     radius: 4
                     color: nextMouse.containsMouse ? "#434c5e" : "transparent"
 
@@ -301,7 +316,7 @@ PopupWindow {
                         text: "›"
                         color: "#88c0d0"
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 16
+                        font.pixelSize: 18
                         font.bold: true
                     }
 
@@ -318,7 +333,7 @@ PopupWindow {
             // 3. Calendar Grid (Headers + 6 Weeks)
             ColumnLayout {
                 Layout.fillWidth: true
-                spacing: 3
+                spacing: 4
 
                 // Day of Week Header Row
                 RowLayout {
@@ -327,11 +342,11 @@ PopupWindow {
 
                     // Week number header
                     Text {
-                        width: 24
+                        width: 26
                         text: "W"
                         color: "#81a1c1"
                         font.family: "JetBrainsMono Nerd Font"
-                        font.pixelSize: 10
+                        font.pixelSize: 11
                         font.bold: true
                         horizontalAlignment: Text.AlignHCenter
                     }
@@ -343,7 +358,7 @@ PopupWindow {
                             text: modelData
                             color: (index >= 5) ? "#81a1c1" : "#d8dee9"
                             font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: 10
+                            font.pixelSize: 11
                             font.bold: true
                             horizontalAlignment: Text.AlignHCenter
                         }
@@ -362,7 +377,7 @@ PopupWindow {
 
                         // Week Number
                         Text {
-                            width: 24
+                            width: 26
                             text: weekRow.modelData.week.toString()
                             color: "#4c566a"
                             font.family: "JetBrainsMono Nerd Font"
@@ -378,12 +393,12 @@ PopupWindow {
                                 id: dayCell
                                 required property var modelData
                                 Layout.fillWidth: true
-                                implicitHeight: 22
+                                implicitHeight: 26
 
                                 Rectangle {
                                     anchors.centerIn: parent
-                                    width: 24
-                                    height: 22
+                                    width: 28
+                                    height: 24
                                     radius: 4
                                     color: dayCell.modelData.today ? "#88c0d0" : (dayMouse.containsMouse ? "#434c5e" : "transparent")
                                 }
@@ -431,12 +446,12 @@ PopupWindow {
             // 4. Footer Section (Today Jump + Timezone Button)
             RowLayout {
                 Layout.fillWidth: true
-                spacing: 6
+                spacing: 8
 
                 Rectangle {
                     visible: !root.viewingCurrentMonth
                     Layout.fillWidth: true
-                    height: 24
+                    height: 26
                     radius: 4
                     color: todayJumpMouse.containsMouse ? "#434c5e" : "#3b4252"
 
@@ -459,19 +474,19 @@ PopupWindow {
 
                 Rectangle {
                     Layout.fillWidth: true
-                    height: 24
+                    height: 26
                     radius: 4
                     color: tzMouse.containsMouse ? "#434c5e" : "#3b4252"
 
                     RowLayout {
                         anchors.centerIn: parent
-                        spacing: 4
+                        spacing: 6
 
                         Text {
                             text: "󱑒"
                             color: "#88c0d0"
                             font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: 11
+                            font.pixelSize: 12
                         }
 
                         Text {

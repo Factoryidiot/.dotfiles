@@ -855,11 +855,18 @@ RowLayout {
         }
     }
 
-    // 8. Clock Module
+    // 8. Calendar Popup
+    CalendarPopup {
+        id: calPopup
+        bar: root.bar
+        anchorTarget: clockRow
+    }
+
+    // 8. Clock & Calendar Module
     Item {
         id: clockModule
-        implicitWidth: clockBtn.implicitWidth
-        implicitHeight: clockBtn.implicitHeight
+        implicitWidth: clockRow.implicitWidth
+        implicitHeight: clockRow.implicitHeight
 
         property bool showAltFormat: false
         property var dateObj: new Date()
@@ -880,15 +887,34 @@ RowLayout {
             }
         }
 
-        IconButton {
-            id: clockBtn
-            text: clockModule.getClockText()
-            color: "#d8dee9"
-            tooltipText: clockModule.showAltFormat ? Qt.formatDateTime(clockModule.dateObj, "dddd HH:mm") : Qt.formatDateTime(clockModule.dateObj, "dd MMMM yyyy")
-            paddingHorizontal: 5
+        RowLayout {
+            id: clockRow
+            spacing: 2
 
-            onClicked: clockModule.showAltFormat = !clockModule.showAltFormat
-            onRightClicked: root.runCmd("launch-floating-terminal-with-presentation tz-select")
+            // Calendar Icon Button (toggles Omarchy-style calendar)
+            IconButton {
+                id: calIconBtn
+                iconText: "󰃭"
+                color: calPopup.isOpen ? "#88c0d0" : "#81a1c1"
+                tooltipText: calPopup.isOpen ? "Close calendar" : "Open calendar"
+                paddingHorizontal: 3
+
+                onClicked: calPopup.toggle()
+            }
+
+            // Date / Time Text (toggles between Time and Date on click)
+            IconButton {
+                id: clockBtn
+                text: clockModule.getClockText()
+                color: "#d8dee9"
+                tooltipText: clockModule.showAltFormat ? 
+                    "Time: " + Qt.formatDateTime(clockModule.dateObj, "dddd HH:mm") + "\nLeft-click: Switch to time\nRight-click: Timezones" :
+                    "Date: " + Qt.formatDateTime(clockModule.dateObj, "dd MMMM yyyy") + "\nLeft-click: Switch to date\nRight-click: Timezones"
+                paddingHorizontal: 4
+
+                onClicked: clockModule.showAltFormat = !clockModule.showAltFormat
+                onRightClicked: root.runCmd("launch-floating-terminal-with-presentation tz-select")
+            }
         }
     }
 }

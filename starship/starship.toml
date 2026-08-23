@@ -5,7 +5,7 @@
 
 format = """
 $os\
-[](bg:nord2 fg:nord4)\
+[](bg:nord1 fg:nord4)\
 $directory\
 [](bg:nord2 fg:nord1)\
 $git_branch\
@@ -30,7 +30,13 @@ $aws\
 $docker_context\
 [](fg:nord3)\
 $fill\
-([](fg:nord3)$status[$username](bg:nord3 fg:nord4)[@](bg:nord3 fg:nord4)[$hostname](bg:nord3 fg:nord4)$jobs$cmd_duration)
+[](fg:nord3)\
+$status\
+$jobs\
+$cmd_duration\
+$username\
+[@](bg:nord3 fg:nord4)\
+$hostname\
 $character
 """
 

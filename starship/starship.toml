@@ -36,7 +36,7 @@ $jobs\
 $cmd_duration\
 $username\
 [@](bg:nord3 fg:nord4)\
-$hostname\
+$hostname
 $character
 """
 

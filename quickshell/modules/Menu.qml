@@ -344,7 +344,7 @@ PanelWindow {
         height: Math.min(460, Math.max(100, 68 + (resultsList.count * 32)))
         anchors.centerIn: parent
         color: "#2e3440"
-        border.color: "#4c566a"
+        border.color: "#d8dee9"
         border.width: 1
         radius: 6
         clip: true

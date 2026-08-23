@@ -3,11 +3,8 @@
 -- -----------------------------------------------------
 
 -- Variables declared natively as local Lua strings
-local activeBorderColor = {
-  colors = { "rgba(33ccffee)", "rgba(00ff99ee)" },
-  angle = 45
-}
-local inactiveBorderColor = "rgba(595959aa)"
+local activeBorderColor = "rgba(88c0d0ee)"
+local inactiveBorderColor = "rgba(434c5eee)"
 
 hl.config({
   general = {

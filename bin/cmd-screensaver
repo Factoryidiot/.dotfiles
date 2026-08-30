@@ -27,7 +27,8 @@ printf '\033]11;rgb:00/00/00\007'  # Black background
 hyprctl keyword cursor:invisible true &>/dev/null
 stty -echo # Disable echoing of input keys
 
-  hyprctl keyword cursor:invisible false &>/dev/null || true
+initial_cursor=$(hyprctl cursorpos 2>/dev/null)
+
 while true; do
   # Run tte in the background
   tte -i ~/.dotfiles/bin/screensaver.txt \
@@ -39,8 +40,14 @@ while true; do
 
   tte_pid=$!
 
-  # Wait for process end OR input/focus loss
+  # Wait for process end OR input/focus loss/mouse movement
   while kill -0 $tte_pid 2>/dev/null; do
+    current_cursor=$(hyprctl cursorpos 2>/dev/null)
+    if [[ -n "$initial_cursor" && -n "$current_cursor" && "$current_cursor" != "$initial_cursor" ]]; then
+      kill $tte_pid 2>/dev/null
+      exit_screensaver
+    fi
+
     # Zsh uses -k 1 instead of -n1
     if read -rs -k 1 -t 0.1 || ! screensaver_in_focus; then
       kill $tte_pid 2>/dev/null

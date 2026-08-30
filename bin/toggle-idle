@@ -1,9 +1,12 @@
 #!/usr/bin/env zsh
 
-if pgrep -x hypridle >/dev/null; then
+if systemctl --user is-active hypridle.service &>/dev/null; then
+  systemctl --user stop hypridle.service
+  notify-send -u normal -i preferences-desktop-screensaver "Idle Lock" "Stopped locking computer when idle"
+elif pgrep -x hypridle >/dev/null; then
   pkill -x hypridle
-  notify-send "Stop locking computer when idle"
+  notify-send -u normal -i preferences-desktop-screensaver "Idle Lock" "Stopped locking computer when idle"
 else
-  uwsm app -- hypridle >/dev/null 2>&1 &
-  notify-send "Now locking computer when idle"
+  systemctl --user start hypridle.service 2>/dev/null || uwsm-app -- hypridle >/dev/null 2>&1 &
+  notify-send -u normal -i preferences-desktop-screensaver "Idle Lock" "Now locking computer when idle"
 fi

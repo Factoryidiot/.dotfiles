@@ -9,7 +9,6 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("systemctl --user import-environment $(env | cut -d'=' -f 1)")
 
     -- Background apps and daemons managed by UWSM
-    hl.exec_cmd("uwsm-app -- hypridle")
     hl.exec_cmd("uwsm-app -- quickshell")
     -- hl.exec_cmd("uwsm-app -- elephant")
     -- hl.exec_cmd("uwsm-app -- mako")

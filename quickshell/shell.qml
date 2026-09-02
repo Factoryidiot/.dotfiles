@@ -13,6 +13,16 @@ ShellRoot {
         id: appMenu
     }
 
+    // Native Clipboard History Modal
+    Clipboard {
+        id: clipboardHistory
+    }
+
+    // Native On-Screen Display (OSD)
+    Osd {
+        id: osdOverlay
+    }
+
     // Native Desktop & System Notifications Server
     Notifications {
         id: notifications

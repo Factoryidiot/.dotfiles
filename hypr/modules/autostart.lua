@@ -11,6 +11,5 @@ hl.on("hyprland.start", function()
     -- Background apps and daemons managed by UWSM
     hl.exec_cmd("systemctl --user start hypridle.service 2>/dev/null || uwsm-app -- hypridle")
     hl.exec_cmd("uwsm-app -- quickshell")
-    hl.exec_cmd("uwsm-app -- swayosd-watchdog")
     hl.exec_cmd("uwsm-app -- wl-paste --watch cliphist store")
 end)

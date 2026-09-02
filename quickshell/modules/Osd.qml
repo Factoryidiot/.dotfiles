@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
+import Quickshell.Hyprland
 
 Item {
     id: root
@@ -17,6 +18,18 @@ Item {
     property real progressValue: 0.5
     property bool showProgress: true
 
+    function getActiveScreen() {
+        if (Hyprland.focusedMonitor && Hyprland.focusedMonitor.name) {
+            for (let i = 0; i < Quickshell.screens.length; i++) {
+                let s = Quickshell.screens[i];
+                if (s && s.name === Hyprland.focusedMonitor.name) {
+                    return s;
+                }
+            }
+        }
+        return Quickshell.screens.length > 0 ? Quickshell.screens[0] : null;
+    }
+
     Timer {
         id: hideTimer
         interval: 1600
@@ -25,6 +38,7 @@ Item {
     }
 
     function triggerOsd(type, glyph, color, title, valStr, prog, hasProg) {
+        osdWindow.screen = root.getActiveScreen();
         root.osdType = type;
         root.iconGlyph = glyph;
         root.iconColor = color;
@@ -171,117 +185,112 @@ Item {
         }
     }
 
-    // Render OSD window on all connected displays
-    Variants {
-        model: Quickshell.screens
+    // Single OSD panel window that follows active screen with zero layout disturbance
+    PanelWindow {
+        id: osdWindow
+        screen: root.getActiveScreen()
 
-        delegate: Component {
-            PanelWindow {
-                id: osdWindow
-                required property var modelData
-                screen: modelData
+        anchors {
+            bottom: true
+        }
+        margins {
+            bottom: 64
+        }
 
-                anchors {
-                    bottom: true
+        implicitWidth: 280
+        implicitHeight: 52
+        color: "transparent"
+
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "quickshell-osd"
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+        exclusionMode: ExclusionMode.Ignore
+
+        visible: root.isShown
+
+        // SwayOSD-style pill card
+        Rectangle {
+            anchors.fill: parent
+            color: "#2e3440"
+            border.color: "#d8dee9"
+            border.width: 1
+            radius: 6
+
+            opacity: root.isShown ? 1.0 : 0.0
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 150
+                    easing.type: Easing.OutQuad
                 }
-                margins {
-                    bottom: 64
+            }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 16
+                anchors.rightMargin: 16
+                anchors.topMargin: 10
+                anchors.bottomMargin: 10
+                spacing: 12
+
+                // Icon
+                Text {
+                    text: root.iconGlyph
+                    color: root.iconColor
+                    font.family: "JetBrainsMono Nerd Font"
+                    font.pixelSize: 22
+                    Layout.alignment: Qt.AlignVCenter
                 }
 
-                implicitWidth: 280
-                implicitHeight: 52
-                color: "transparent"
+                // Details & Progress
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.alignment: Qt.AlignVCenter
+                    spacing: 4
 
-                WlrLayershell.layer: WlrLayer.Overlay
-                WlrLayershell.namespace: "quickshell-osd"
+                    // Title & Value text row
+                    RowLayout {
+                        Layout.fillWidth: true
 
-                visible: root.isShown
+                        Text {
+                            text: root.titleText
+                            color: "#d8dee9"
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
 
-                // SwayOSD-style pill card
-                Rectangle {
-                    anchors.fill: parent
-                    color: "#2e3440"
-                    border.color: "#d8dee9"
-                    border.width: 1
-                    radius: 6
+                        Item { Layout.fillWidth: true }
 
-                    opacity: root.isShown ? 1.0 : 0.0
-
-                    Behavior on opacity {
-                        NumberAnimation {
-                            duration: 150
-                            easing.type: Easing.OutQuad
+                        Text {
+                            text: root.valueText
+                            color: root.iconColor
+                            font.family: "JetBrainsMono Nerd Font"
+                            font.pixelSize: 11
+                            font.bold: true
                         }
                     }
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 16
-                        anchors.rightMargin: 16
-                        anchors.topMargin: 10
-                        anchors.bottomMargin: 10
-                        spacing: 12
+                    // Progress Bar (if applicable)
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 6
+                        radius: 3
+                        color: "#3b4252"
+                        visible: root.showProgress
 
-                        // Icon
-                        Text {
-                            text: root.iconGlyph
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: Math.max(0, Math.min(parent.width, parent.width * root.progressValue))
+                            radius: 3
                             color: root.iconColor
-                            font.family: "JetBrainsMono Nerd Font"
-                            font.pixelSize: 22
-                            Layout.alignment: Qt.AlignVCenter
-                        }
 
-                        // Details & Progress
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignVCenter
-                            spacing: 4
-
-                            // Title & Value text row
-                            RowLayout {
-                                Layout.fillWidth: true
-
-                                Text {
-                                    text: root.titleText
-                                    color: "#d8dee9"
-                                    font.family: "JetBrainsMono Nerd Font"
-                                    font.pixelSize: 11
-                                    font.bold: true
-                                }
-
-                                Item { Layout.fillWidth: true }
-
-                                Text {
-                                    text: root.valueText
-                                    color: root.iconColor
-                                    font.family: "JetBrainsMono Nerd Font"
-                                    font.pixelSize: 11
-                                    font.bold: true
-                                }
-                            }
-
-                            // Progress Bar (if applicable)
-                            Rectangle {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 6
-                                radius: 3
-                                color: "#3b4252"
-                                visible: root.showProgress
-
-                                Rectangle {
-                                    anchors.left: parent.left
-                                    anchors.top: parent.top
-                                    anchors.bottom: parent.bottom
-                                    width: Math.max(0, Math.min(parent.width, parent.width * root.progressValue))
-                                    radius: 3
-                                    color: root.iconColor
-
-                                    Behavior on width {
-                                        NumberAnimation {
-                                            duration: 100
-                                            easing.type: Easing.OutQuad
-                                        }
-                                    }
+                            Behavior on width {
+                                NumberAnimation {
+                                    duration: 100
+                                    easing.type: Easing.OutQuad
                                 }
                             }
                         }

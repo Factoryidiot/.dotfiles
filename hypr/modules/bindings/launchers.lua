@@ -21,7 +21,8 @@ hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd('launch-webapp "https://chat.
 hl.bind(mainMod .. " + SHIFT + Y", hl.dsp.exec_cmd('launch-webapp "https://youtube.com/"'), { desc = "YouTube" })
 
 -- [Clipboard]
-hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd("cliphist list | walker --dmenu | cliphist decode | wl-copy"), { desc = "Clipboard manager" })
+-- Pending native Quickshell clipboard integration
+-- hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd("cliphist list | walker --dmenu | cliphist decode | wl-copy"), { desc = "Clipboard manager" })
 
 -- [Session]
 -- Hand off the exit sequence to UWSM for clean systemd scope termination

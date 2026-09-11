@@ -17,12 +17,16 @@ PanelWindow {
 
     Process {
         id: vmListProc
-        command: ["zsh", "-c", "cmd-vm list"]
+        command: ["zsh", "-c", "cmd-vm list --json"]
         stdout: StdioCollector {
             onStreamFinished: {
                 let out = this.text.trim();
                 if (out.length > 0) {
-                    menuWindow.existingVms = out.split("\n").filter(v => v.trim().length > 0);
+                    try {
+                        menuWindow.existingVms = JSON.parse(out);
+                    } catch (e) {
+                        menuWindow.existingVms = [];
+                    }
                 } else {
                     menuWindow.existingVms = [];
                 }
@@ -59,7 +63,7 @@ PanelWindow {
         activeCategory = categoryId;
         searchInput.text = "";
         searchIndex = 0;
-        if (categoryId === "vms" || categoryId === "vms-start" || categoryId === "vms-delete") {
+        if (categoryId === "vms" || categoryId === "vms-start") {
             vmListProc.running = true;
         }
     }
@@ -131,8 +135,7 @@ PanelWindow {
     readonly property var vmsItems: [
         { id: "vms-curator", name: "VM-Curator", glyph: "󰪶", exec: "launch-or-focus-tui vm-curator" },
         { id: "vms-lazydocker", name: "Lazydocker", glyph: "󰡨", exec: "launch-or-focus-tui lazydocker" },
-        { id: "vms-start", name: "Start VM", glyph: "", isCategory: true },
-        { id: "vms-delete", name: "Delete VM", glyph: "", isCategory: true }
+        { id: "vms-start", name: "Start VM", glyph: "", isCategory: true }
     ]
 
     // Actions Submenu
@@ -212,7 +215,6 @@ PanelWindow {
         if (c === "setup") return "Setup";
         if (c === "vms") return "Virtual Machines";
         if (c === "vms-start") return "Start VM";
-        if (c === "vms-delete") return "Delete VM";
         if (c === "help") return "Help";
         if (c === "system") return "System";
         return "Menu";
@@ -240,17 +242,13 @@ PanelWindow {
                 items.push({ isApp: false, isCategory: false, name: "No VMs found in ~/VMs", glyph: "", icon: "", exec: "" });
             } else {
                 for (var vs = 0; vs < existingVms.length; vs++) {
-                    var vName = existingVms[vs];
-                    items.push({ isApp: false, isCategory: false, name: vName, glyph: "", icon: "", exec: "cmd-vm start '" + vName + "'" });
-                }
-            }
-        } else if (category === "vms-delete") {
-            if (existingVms.length === 0) {
-                items.push({ isApp: false, isCategory: false, name: "No VMs found in ~/VMs", glyph: "", icon: "", exec: "" });
-            } else {
-                for (var vd = 0; vd < existingVms.length; vd++) {
-                    var vdName = existingVms[vd];
-                    items.push({ isApp: false, isCategory: false, name: vdName, glyph: "", icon: "", exec: "cmd-vm delete-confirm '" + vdName + "'" });
+                    var vObj = existingVms[vs];
+                    var vId = vObj.id || "";
+                    var vName = vObj.name || vId;
+                    var isRunning = vObj.running === true;
+                    var label = vName + (isRunning ? " (Running)" : "");
+                    var glyph = isRunning ? "󰐊" : "";
+                    items.push({ isApp: false, isCategory: false, name: label, glyph: glyph, icon: "", exec: "cmd-vm start '" + vId + "'" });
                 }
             }
         } else if (category === "actions") {
@@ -316,9 +314,14 @@ PanelWindow {
                 }
             }
             for (var vmIdx = 0; vmIdx < existingVms.length; vmIdx++) {
-                var vmName = existingVms[vmIdx];
-                if (vmName.toLowerCase().includes(query)) {
-                    globalResults.push({ isApp: false, isCategory: false, name: "Start " + vmName, glyph: "", icon: "", exec: "cmd-vm start '" + vmName + "'" });
+                var gVm = existingVms[vmIdx];
+                var gId = gVm.id || "";
+                var gName = gVm.name || gId;
+                var gRunning = gVm.running === true;
+                if (gName.toLowerCase().includes(query) || gId.toLowerCase().includes(query)) {
+                    var gTitle = (gRunning ? "Focus " : "Start ") + gName + (gRunning ? " (Running)" : "");
+                    var gGlyph = gRunning ? "󰐊" : "";
+                    globalResults.push({ isApp: false, isCategory: false, name: gTitle, glyph: gGlyph, icon: "", exec: "cmd-vm start '" + gId + "'" });
                 }
             }
             if (DesktopEntries && DesktopEntries.applications) {

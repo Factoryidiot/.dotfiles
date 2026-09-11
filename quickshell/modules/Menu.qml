@@ -122,9 +122,9 @@ PanelWindow {
         { id: "setup", name: "Setup", glyph: "", isCategory: true },
         { id: "vms", name: "Virtual Machines", glyph: "", isCategory: true },
         { id: "webapp", name: "Web App", glyph: "", exec: "xdg-terminal-exec --app-id=dot.nix.install-webapp install-webapp" },
-        { id: "about", name: "About", glyph: "󰋽", exec: "display-about" },
         { id: "help", name: "Help", glyph: "󰧑", isCategory: true },
-        { id: "system", name: "System", glyph: "", isCategory: true }
+        { id: "system", name: "System", glyph: "", isCategory: true },
+        { id: "about", name: "About", glyph: "󰋽", exec: "display-about" }
     ]
 
     // Virtual Machines Submenu

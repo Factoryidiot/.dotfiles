@@ -27,7 +27,12 @@ printf '\033]11;rgb:00/00/00\007'  # Black background
 hyprctl keyword cursor:invisible true &>/dev/null
 stty -echo # Disable echoing of input keys
 
+# Startup grace period to allow window mapping, fullscreen, and focus to stabilize
+sleep 1.2
+
 initial_cursor=$(hyprctl cursorpos 2>/dev/null)
+initial_x=${initial_cursor%%,*}
+initial_y=${initial_cursor##*, }
 
 while true; do
   # Run tte in the background
@@ -43,9 +48,18 @@ while true; do
   # Wait for process end OR input/focus loss/mouse movement
   while kill -0 $tte_pid 2>/dev/null; do
     current_cursor=$(hyprctl cursorpos 2>/dev/null)
-    if [[ -n "$initial_cursor" && -n "$current_cursor" && "$current_cursor" != "$initial_cursor" ]]; then
-      kill $tte_pid 2>/dev/null
-      exit_screensaver
+    if [[ -n "$initial_cursor" && -n "$current_cursor" ]]; then
+      curr_x=${current_cursor%%,*}
+      curr_y=${current_cursor##*, }
+      dx=$(( curr_x - initial_x ))
+      dy=$(( curr_y - initial_y ))
+      (( dx < 0 )) && dx=$(( -dx ))
+      (( dy < 0 )) && dy=$(( -dy ))
+      # Trigger exit if mouse moved more than 25 pixels
+      if (( dx > 25 || dy > 25 )); then
+        kill $tte_pid 2>/dev/null
+        exit_screensaver
+      fi
     fi
 
     # Zsh uses -k 1 instead of -n1

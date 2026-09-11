@@ -29,8 +29,8 @@ for m in $(hyprctl monitors -j | jq -r '.[] | .name'); do
     hyprctl dispatch "hl.dsp.exec_cmd('alacritty --class=dot.nix.screensaver --config-file $HOME/.config/alacritty/screensaver.toml -e cmd-screensaver')"
     ;;
   *ghostty*|*Ghostty*|*com.mitchellh.ghostty*)
-    # Launch Ghostty with the screensaver config
-    hyprctl dispatch "hl.dsp.exec_cmd('ghostty --class=dot.nix.screensaver --config-file=$HOME/.config/ghostty/screensaver -e cmd-screensaver')"
+    # Launch Ghostty with the screensaver config in an isolated instance
+    hyprctl dispatch "hl.dsp.exec_cmd('ghostty --gtk-single-instance=false --class=dot.nix.screensaver --config-file=$HOME/.config/ghostty/screensaver -e cmd-screensaver')"
     ;;
   *)
     notify-send "✋  Screensaver only runs in Alacritty or Ghostty"

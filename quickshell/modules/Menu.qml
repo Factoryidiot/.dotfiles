@@ -168,12 +168,38 @@ PanelWindow {
     // Power & Session Submenu
     readonly property var systemActions: [
         { id: "action-lock", name: "Lock", glyph: "", exec: "hyprlock" },
-        { id: "action-screensaver", name: "Screensaver (Force)", glyph: "󱄄", exec: "launch-screensaver force" },
+        { id: "action-screensaver", name: "Screensaver", glyph: "󱄄", exec: "launch-screensaver force" },
         { id: "action-suspend", name: "Suspend", glyph: "󰒲", exec: "systemctl suspend" },
         { id: "action-reboot", name: "Reboot", glyph: "󰜉", exec: "systemctl reboot" },
         { id: "action-shutdown", name: "Shutdown", glyph: "󰐥", exec: "systemctl poweroff" },
         { id: "action-logout", name: "Log Out", glyph: "󰍃", exec: "hyprctl dispatch 'hl.dsp.exit()'" }
     ]
+
+    // Apps to blacklist from the launcher and search results
+    readonly property var blacklistedApps: [
+        "vm-curator",
+        "curator",
+        "ghostty",
+        "vim",
+        "gvim",
+        "nvim",
+        "nixvim"
+    ]
+
+    function isAppHidden(app) {
+        if (!app) return true;
+        if (app.noDisplay) return true;
+        var name = (app.name || "").toLowerCase();
+        var id = (app.id || "").toLowerCase();
+
+        for (var i = 0; i < blacklistedApps.length; i++) {
+            var target = blacklistedApps[i].toLowerCase();
+            if (name === target || id === target || id === target + ".desktop" || name.includes(target) || id.includes(target)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     function getBreadcrumbTitle() {
         if (searchInput.text.trim().length > 0) return "Search";
@@ -214,11 +240,9 @@ PanelWindow {
                 var apps = DesktopEntries.applications.values;
                 for (var a = 0; a < apps.length; a++) {
                     var app = apps[a];
-                    if (!app || app.nodisplay) continue;
+                    if (menuWindow.isAppHidden(app)) continue;
                     var appName = app.name || "";
                     var appComment = app.comment || app.genericName || "";
-                    var appId = app.id || "";
-                    if (appName.toLowerCase().includes("vm-curator") || appName.toLowerCase() === "curator" || appId.toLowerCase().includes("vm-curator")) continue;
                     if (appName.toLowerCase().includes(query) || appComment.toLowerCase().includes(query)) {
                         results.push({ isApp: true, isCategory: false, name: appName, glyph: "", icon: app.icon || "application-x-executable", appObj: app });
                     }
@@ -306,10 +330,7 @@ PanelWindow {
                 appsList.sort((x, y) => (x.name || "").localeCompare(y.name || ""));
                 for (var a2 = 0; a2 < appsList.length; a2++) {
                     var app2 = appsList[a2];
-                    if (!app2 || app2.nodisplay) continue;
-                    var aName = (app2.name || "").toLowerCase();
-                    var aId = (app2.id || "").toLowerCase();
-                    if (aName.includes("vm-curator") || aName === "curator" || aId.includes("vm-curator")) continue;
+                    if (menuWindow.isAppHidden(app2)) continue;
                     results.push({ isApp: true, isCategory: false, name: app2.name || "", glyph: "", icon: app2.icon || "application-x-executable", appObj: app2 });
                 }
             }
@@ -522,7 +543,7 @@ PanelWindow {
 
                             Image {
                                 anchors.fill: parent
-                                source: modelData.icon ? Quickshell.iconPath(modelData.icon, true) : ""
+                                source: modelData.icon ? (Quickshell.iconPath(modelData.icon, true) || Quickshell.iconPath("application-x-executable", true)) : ""
                                 sourceSize: Qt.size(14, 14)
                                 fillMode: Image.PreserveAspectFit
                             }

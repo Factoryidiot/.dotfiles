@@ -145,13 +145,12 @@ PanelWindow {
 
     // Setup & Settings Submenu
     readonly property var setupItems: [
-        { id: "setup-audio", name: "Audio (wiremix)", glyph: "", exec: "launch-or-focus-tui wiremix" },
-        { id: "setup-wifi", name: "WiFi (impala)", glyph: "", exec: "launch-wifi" },
-        { id: "setup-bluetooth", name: "Bluetooth (bluetui)", glyph: "󰂯", exec: "launch-bluetooth" },
+        { id: "setup-audio", name: "Audio", glyph: "", exec: "launch-or-focus-tui wiremix" },
+        { id: "setup-wifi", name: "Wifi", glyph: "", exec: "launch-wifi" },
+        { id: "setup-bluetooth", name: "Bluetooth", glyph: "󰂯", exec: "launch-bluetooth" },
         { id: "setup-monitors", name: "Monitors", glyph: "󰍹", exec: "launch-editor ~/.dotfiles/hypr/modules/monitors.lua" },
         { id: "setup-keybindings", name: "Keybindings", glyph: "", exec: "launch-editor ~/.dotfiles/hypr/modules/keybindings.lua" },
-        { id: "setup-wallpaper", name: "Wallpaper (waypaper)", glyph: "", exec: "waypaper" },
-        { id: "setup-weather-report", name: "Weather Report", glyph: "", exec: "launch-weather-report" }
+        { id: "setup-wallpaper", name: "Wallpaper", glyph: "", exec: "waypaper" }
     ]
 
     // Help & Docs Submenu

@@ -135,10 +135,14 @@ Scope {
                                 anchors.margins: 8
                                 spacing: 4
 
-                                // Header: App Icon, App Name, Close Button
+                                readonly property bool hasRealApp: modelData.appName &&
+                                    modelData.appName !== "notify-send" &&
+                                    modelData.appName !== "Notification"
+
+                                // Title Row: App/Bell Icon, Summary/Title, Close Button
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    spacing: 6
+                                    spacing: 8
 
                                     Item {
                                         Layout.preferredWidth: 14
@@ -164,10 +168,10 @@ Scope {
                                     }
 
                                     Text {
-                                        text: modelData.appName
-                                        color: "#81a1c1"
+                                        text: (cardContent.hasRealApp ? (modelData.appName + ": ") : "") + (modelData.summary !== "" ? modelData.summary : modelData.body)
+                                        color: "#eceff4"
                                         font.family: "JetBrainsMono Nerd Font"
-                                        font.pixelSize: 10
+                                        font.pixelSize: 12
                                         font.bold: true
                                         elide: Text.ElideRight
                                         Layout.fillWidth: true
@@ -193,19 +197,7 @@ Scope {
                                     }
                                 }
 
-                                // Title / Summary
-                                Text {
-                                    text: modelData.summary
-                                    color: "#eceff4"
-                                    font.family: "JetBrainsMono Nerd Font"
-                                    font.pixelSize: 12
-                                    font.bold: true
-                                    elide: Text.ElideRight
-                                    Layout.fillWidth: true
-                                    visible: modelData.summary !== ""
-                                }
-
-                                // Body
+                                // Body (when both summary and body exist)
                                 Text {
                                     text: modelData.body
                                     color: "#d8dee9"
@@ -215,7 +207,8 @@ Scope {
                                     maximumLineCount: 4
                                     elide: Text.ElideRight
                                     Layout.fillWidth: true
-                                    visible: modelData.body !== ""
+                                    Layout.leftMargin: 22
+                                    visible: modelData.summary !== "" && modelData.body !== ""
                                 }
                             }
 

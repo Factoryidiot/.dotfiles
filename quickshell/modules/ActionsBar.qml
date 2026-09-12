@@ -107,7 +107,7 @@ Item {
             iconText: "󱓞"
             color: root.isHovered ? "#88c0d0" : "#4c566a"
             paddingHorizontal: 4
-            tooltipText: "Actions (Super + Alt + Space > Actions)\nHover: Reveal action toggles\nClick: Actions Menu"
+            tooltipText: "Click: Actions Menu"
             onClicked: root.toggleActionsMenu()
         }
 

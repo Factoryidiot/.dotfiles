@@ -190,7 +190,8 @@ PanelWindow {
         "vim",
         "gvim",
         "nvim",
-        "nixvim"
+        "nixvim",
+        "uuctl"
     ]
 
     function isAppHidden(app) {

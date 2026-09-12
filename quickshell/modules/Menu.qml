@@ -125,7 +125,7 @@ PanelWindow {
         { id: "actions", name: "Actions", glyph: "󱓞", isCategory: true },
         { id: "setup", name: "Setup", glyph: "", isCategory: true },
         { id: "vms", name: "Virtual Machines", glyph: "", isCategory: true },
-        { id: "webapp", name: "Web App", glyph: "", exec: "xdg-terminal-exec --app-id=dot.nix.install-webapp install-webapp" },
+        { id: "webapp", name: "Web Apps", glyph: "", exec: "xdg-terminal-exec --app-id=dot.nix.install-webapp install-webapp" },
         { id: "help", name: "Help", glyph: "󰧑", isCategory: true },
         { id: "system", name: "System", glyph: "", isCategory: true },
         { id: "about", name: "About", glyph: "󰋽", exec: "display-about" }

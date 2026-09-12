@@ -215,7 +215,7 @@ EOF
   fi
 }
 
-delete_web_app() {
+remove_web_app() {
   echo -e "\e[31mSelect Web Apps to remove (Space to select, Enter to confirm):\n\e[0m"
   
   local targets=()
@@ -226,7 +226,7 @@ delete_web_app() {
   done
 
   if [ ${#targets[@]} -eq 0 ]; then
-    echo "No Web Apps found to delete."
+    echo "No Web Apps found to remove."
     echo "Press Enter to return..."
     read -r
     return
@@ -236,7 +236,7 @@ delete_web_app() {
   CHOICES=$(printf "%s\n" "${targets[@]}" | gum filter --no-limit --placeholder="Search apps to remove...")
 
   if [ -z "$CHOICES" ]; then
-    echo "Deletion cancelled. No apps selected."
+    echo "Removal cancelled. No apps selected."
     echo "Press Enter to return..."
     read -r
     return
@@ -270,16 +270,16 @@ fi
 while true; do
   clear
   echo -e "\e[34m== Web App Manager ==\e[0m"
-  ACTION=$(gum choose "Add Web App" "Delete Web App" "Exit")
+  ACTION=$(gum choose "Add Web App" "Remove Web App" "Exit")
 
   case "$ACTION" in
     "Add Web App")
       clear
       add_web_app
       ;;
-    "Delete Web App")
+    "Remove Web App")
       clear
-      delete_web_app
+      remove_web_app
       ;;
     *)
       exit 0

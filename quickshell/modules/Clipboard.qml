@@ -139,7 +139,7 @@ PanelWindow {
         color: "#2e3440"
         border.color: "#d8dee9"
         border.width: 1
-        radius: 6
+        radius: 0
         clip: true
 
         MouseArea {
@@ -174,7 +174,7 @@ PanelWindow {
 
                 Rectangle {
                     color: "#3b4252"
-                    radius: 3
+                    radius: 0
                     implicitWidth: countText.implicitWidth + 8
                     implicitHeight: countText.implicitHeight + 4
 
@@ -195,7 +195,7 @@ PanelWindow {
                     implicitWidth: clearText.implicitWidth + 10
                     implicitHeight: clearText.implicitHeight + 4
                     color: clearHover.containsMouse ? "#bf616a" : "#3b4252"
-                    radius: 3
+                    radius: 0
 
                     Text {
                         id: clearText
@@ -221,7 +221,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 32
                 color: "#3b4252"
-                radius: 4
+                radius: 0
                 border.width: 1
                 border.color: searchInput.activeFocus ? "#88c0d0" : "#434c5e"
 
@@ -332,7 +332,7 @@ PanelWindow {
 
                     width: resultsList.width
                     height: 32
-                    radius: 4
+                    radius: 0
                     color: index === clipWindow.selectedIndex ? "#434c5e" : (itemHover.containsMouse ? "#3b4252" : "transparent")
 
                     RowLayout {

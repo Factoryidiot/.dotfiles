@@ -149,7 +149,7 @@ RowLayout {
             color: "#2e3440"
             border.color: "#d8dee9"
             border.width: 1
-            radius: 6
+            radius: 0
             clip: true
 
             ColumnLayout {
@@ -171,7 +171,7 @@ RowLayout {
 
                         Rectangle {
                             anchors.fill: parent
-                            radius: 4
+                            radius: 0
                             color: backMouse.containsMouse ? "#434c5e" : "transparent"
                         }
 
@@ -272,7 +272,7 @@ RowLayout {
                                 Rectangle {
                                     visible: !menuRow.isSep
                                     anchors.fill: parent
-                                    radius: 4
+                                    radius: 0
                                     color: rowMouse.containsMouse && (modelData.enabled !== false) ? "#434c5e" : "transparent"
                                 }
 
@@ -407,7 +407,7 @@ RowLayout {
                         Rectangle {
                             id: trayBg
                             anchors.fill: parent
-                            radius: 3
+                            radius: 0
                             color: "#434c5e"
                             opacity: trayMouseArea.containsMouse ? 0.4 : 0.0
                             visible: trayMouseArea.containsMouse

@@ -160,7 +160,7 @@ ShellRoot {
                         color: "#2e3440"
                         border.color: "#4c566a"
                         border.width: 1
-                        radius: 4
+                        radius: 0
 
                         Text {
                             id: tooltipLabel

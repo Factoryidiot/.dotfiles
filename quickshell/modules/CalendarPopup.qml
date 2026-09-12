@@ -172,7 +172,7 @@ PopupWindow {
         color: "#2e3440"
         border.color: "#d8dee9"
         border.width: 1
-        radius: 6
+        radius: 0
         clip: true
 
         ColumnLayout {
@@ -230,13 +230,13 @@ PopupWindow {
                     Rectangle {
                         width: 76
                         height: 6
-                        radius: 3
+                        radius: 0
                         color: "#3b4252"
 
                         Rectangle {
                             width: Math.round(parent.width * (root.getYearProgress() / 100))
                             height: parent.height
-                            radius: 3
+                            radius: 0
                             color: "#81a1c1"
                         }
                     }
@@ -260,7 +260,7 @@ PopupWindow {
                 Rectangle {
                     width: 26
                     height: 26
-                    radius: 4
+                    radius: 0
                     color: prevMouse.containsMouse ? "#434c5e" : "transparent"
 
                     Text {
@@ -308,7 +308,7 @@ PopupWindow {
                 Rectangle {
                     width: 26
                     height: 26
-                    radius: 4
+                    radius: 0
                     color: nextMouse.containsMouse ? "#434c5e" : "transparent"
 
                     Text {
@@ -399,7 +399,7 @@ PopupWindow {
                                     anchors.centerIn: parent
                                     width: 28
                                     height: 24
-                                    radius: 4
+                                    radius: 0
                                     color: dayCell.modelData.today ? "#88c0d0" : (dayMouse.containsMouse ? "#434c5e" : "transparent")
                                 }
 
@@ -452,7 +452,7 @@ PopupWindow {
                     visible: !root.viewingCurrentMonth
                     Layout.fillWidth: true
                     height: 26
-                    radius: 4
+                    radius: 0
                     color: todayJumpMouse.containsMouse ? "#434c5e" : "#3b4252"
 
                     Text {
@@ -475,7 +475,7 @@ PopupWindow {
                 Rectangle {
                     Layout.fillWidth: true
                     height: 26
-                    radius: 4
+                    radius: 0
                     color: tzMouse.containsMouse ? "#434c5e" : "#3b4252"
 
                     RowLayout {

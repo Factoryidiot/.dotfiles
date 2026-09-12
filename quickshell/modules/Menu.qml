@@ -380,7 +380,7 @@ PanelWindow {
         color: "#2e3440"
         border.color: "#d8dee9"
         border.width: 1
-        radius: 6
+        radius: 0
         clip: true
 
         MouseArea {
@@ -403,7 +403,7 @@ PanelWindow {
                 Rectangle {
                     width: 24
                     height: 24
-                    radius: 4
+                    radius: 0
                     color: backMouseArea.containsMouse ? "#434c5e" : "#3b4252"
 
                     Text {
@@ -439,7 +439,7 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 30
                 color: "#3b4252"
-                radius: 4
+                radius: 0
                 border.color: searchInput.activeFocus ? "#88c0d0" : "#434c5e"
                 border.width: 1
 
@@ -526,7 +526,7 @@ PanelWindow {
 
                     width: resultsList.width
                     height: 30
-                    radius: 4
+                    radius: 0
                     color: index === menuWindow.searchIndex ? "#434c5e" : (rowMouseArea.containsMouse ? "#3b4252" : "transparent")
 
                     RowLayout {

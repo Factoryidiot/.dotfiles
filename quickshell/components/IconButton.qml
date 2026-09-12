@@ -38,7 +38,7 @@ Item {
     Rectangle {
         id: bg
         anchors.fill: parent
-        radius: 3
+        radius: 0
         color: root.isActive ? root.activeColor : (mouseArea.containsMouse ? root.hoverColor : "transparent")
         opacity: root.isActive ? 0.25 : (mouseArea.containsMouse ? 0.4 : 0.0)
         visible: root.hasBackground || mouseArea.containsMouse || root.isActive

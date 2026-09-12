@@ -214,7 +214,7 @@ Item {
             color: "#2e3440"
             border.color: "#d8dee9"
             border.width: 1
-            radius: 6
+            radius: 0
 
             opacity: root.isShown ? 1.0 : 0.0
 
@@ -275,7 +275,7 @@ Item {
                     Rectangle {
                         Layout.fillWidth: true
                         Layout.preferredHeight: 6
-                        radius: 3
+                        radius: 0
                         color: "#3b4252"
                         visible: root.showProgress
 
@@ -284,7 +284,7 @@ Item {
                             anchors.top: parent.top
                             anchors.bottom: parent.bottom
                             width: Math.max(0, Math.min(parent.width, parent.width * root.progressValue))
-                            radius: 3
+                            radius: 0
                             color: root.iconColor
 
                             Behavior on width {

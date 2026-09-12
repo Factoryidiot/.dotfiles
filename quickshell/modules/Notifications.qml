@@ -117,7 +117,7 @@ Scope {
 
                             Layout.fillWidth: true
                             implicitHeight: cardContent.implicitHeight + 16
-                            radius: 6
+                            radius: 0
                             color: "#2e3440"
                             border.color: modelData.urgency === NotificationUrgency.Critical ? "#bf616a" : "#d8dee9"
                             border.width: 1

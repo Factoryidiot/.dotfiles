@@ -197,7 +197,7 @@ PopupWindow {
         color: "#2e3440"
         border.color: "#d8dee9"
         border.width: 1
-        radius: 6
+        radius: 0
         clip: true
 
         ColumnLayout {
@@ -327,7 +327,7 @@ PopupWindow {
 
                         Layout.fillWidth: true
                         implicitHeight: 70
-                        radius: 4
+                        radius: 0
                         color: fMouse.containsMouse ? "#434c5e" : "#3b4252"
 
                         ColumnLayout {
@@ -387,7 +387,7 @@ PopupWindow {
                 Rectangle {
                     Layout.fillWidth: true
                     height: 26
-                    radius: 4
+                    radius: 0
                     color: refMouse.containsMouse ? "#434c5e" : "#3b4252"
 
                     RowLayout {
@@ -422,7 +422,7 @@ PopupWindow {
                 Rectangle {
                     Layout.fillWidth: true
                     height: 26
-                    radius: 4
+                    radius: 0
                     color: webMouse.containsMouse ? "#434c5e" : "#3b4252"
 
                     RowLayout {

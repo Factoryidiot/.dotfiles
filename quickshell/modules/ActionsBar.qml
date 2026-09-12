@@ -91,11 +91,11 @@ Item {
             }
         }
 
-        // Trigger icon shown when NO actions are active (or when hovered)
+        // Trigger drawer icon: only shown when NO actions are active
         Item {
             id: triggerWrapper
             implicitHeight: 24
-            implicitWidth: (!root.hasActive || root.isHovered) ? triggerBtn.implicitWidth : 0
+            implicitWidth: (!root.hasActive) ? triggerBtn.implicitWidth : 0
             clip: true
             visible: implicitWidth > 0
 
@@ -109,111 +109,85 @@ Item {
                 iconText: "󱓞"
                 color: root.isHovered ? "#88c0d0" : "#4c566a"
                 paddingHorizontal: 4
-                tooltipText: "Actions Bar\nHover to reveal actions\nClick: Open Actions Menu"
-                onClicked: root.runCmd("quickshell -p ~/.dotfiles/quickshell ipc call menu toggle")
+                tooltipText: "Actions Bar\nHover to reveal actions\nClick: Actions Menu"
+                onClicked: root.runCmd("quickshell -p ~/.dotfiles/quickshell ipc call menu actions")
             }
         }
 
-        // 1. Music (cliamp)
-        Item {
-            id: musicWrapper
-            property bool shouldShow: root.cliampRunning || root.isHovered
-            implicitHeight: 24
-            implicitWidth: shouldShow ? musicBtn.implicitWidth : 0
-            clip: true
-            visible: implicitWidth > 0
+        // Active Actions block (permanently visible, anchored on left)
+        Row {
+            id: activeRow
+            spacing: 2
+            anchors.verticalCenter: parent.verticalCenter
+            visible: root.hasActive
 
-            Behavior on implicitWidth {
-                NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
-            }
-
+            // 1. Music (Active)
             IconButton {
-                id: musicBtn
+                id: musicActiveBtn
+                visible: root.cliampRunning
                 bar: root.bar
                 iconText: ""
-                color: root.cliampRunning ? "#88c0d0" : "#4c566a"
-                opacity: root.cliampRunning ? 1.0 : 0.7
+                color: "#88c0d0"
                 paddingHorizontal: 4
-                tooltipText: root.cliampRunning ?
-                    "Music (cliamp - Running)\nLeft-click: Focus\nRight-click: Play / Pause" :
-                    "Music (cliamp)\nLeft-click: Launch cliamp\nRight-click: Play / Pause"
-
+                tooltipText: "Music (cliamp - Running)\nLeft-click: Focus\nRight-click: Play / Pause"
                 onClicked: root.runCmd("launch-or-focus-tui cliamp")
                 onRightClicked: {
                     root.runCmd("playerctl play-pause 2>/dev/null");
                     root.refreshSoon();
                 }
             }
-        }
 
-        // 2. Toggle Screensaver
-        Item {
-            id: screensaverWrapper
-            property bool shouldShow: root.screensaverOff || root.isHovered
-            implicitHeight: 24
-            implicitWidth: shouldShow ? screensaverBtn.implicitWidth : 0
-            clip: true
-            visible: implicitWidth > 0
-
-            Behavior on implicitWidth {
-                NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
-            }
-
+            // 2. Screensaver (Active - Inhibited)
             IconButton {
-                id: screensaverBtn
+                id: screensaverActiveBtn
+                visible: root.screensaverOff
                 bar: root.bar
                 iconText: "󱄄"
-                color: root.screensaverOff ? "#ebcb8b" : "#4c566a"
-                opacity: root.screensaverOff ? 1.0 : 0.7
+                color: "#ebcb8b"
                 paddingHorizontal: 4
-                tooltipText: root.screensaverOff ?
-                    "Screensaver: Disabled (Stay Awake)\nClick to enable" :
-                    "Screensaver: Enabled\nClick to disable"
-
+                tooltipText: "Screensaver: Disabled (Stay Awake)\nClick to enable"
                 onClicked: {
                     root.runCmd("toggle-screensaver");
                     root.refreshSoon();
                 }
             }
-        }
 
-        // 3. Toggle Nightlight
-        Item {
-            id: nightlightWrapper
-            property bool shouldShow: root.nightlightOn || root.isHovered
-            implicitHeight: 24
-            implicitWidth: shouldShow ? nightlightBtn.implicitWidth : 0
-            clip: true
-            visible: implicitWidth > 0
-
-            Behavior on implicitWidth {
-                NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
-            }
-
+            // 3. Nightlight (Active - Warm)
             IconButton {
-                id: nightlightBtn
+                id: nightlightActiveBtn
+                visible: root.nightlightOn
                 bar: root.bar
                 iconText: "󰔎"
-                color: root.nightlightOn ? "#d08770" : "#4c566a"
-                opacity: root.nightlightOn ? 1.0 : 0.7
+                color: "#d08770"
                 paddingHorizontal: 4
-                tooltipText: root.nightlightOn ?
-                    "Nightlight: Active (4000K)\nClick to toggle daylight" :
-                    "Nightlight: Inactive (6000K)\nClick to toggle nightlight"
-
+                tooltipText: "Nightlight: Active (4000K)\nClick to toggle daylight"
                 onClicked: {
                     root.runCmd("toggle-nightlight");
                     root.refreshSoon();
                 }
             }
+
+            // 4. Idle Lock (Active - Inhibited)
+            IconButton {
+                id: idleActiveBtn
+                visible: root.stayAwakeActive
+                bar: root.bar
+                iconText: "󱫖"
+                color: "#bf616a"
+                paddingHorizontal: 4
+                tooltipText: "Idle Lock: Disabled (Stay Awake)\nClick to enable"
+                onClicked: {
+                    root.runCmd("toggle-idle");
+                    root.refreshSoon();
+                }
+            }
         }
 
-        // 4. Toggle Idle Lock
+        // Inactive Actions area: smoothly expands to the right on hover
         Item {
-            id: idleWrapper
-            property bool shouldShow: root.stayAwakeActive || root.isHovered
+            id: inactiveArea
             implicitHeight: 24
-            implicitWidth: shouldShow ? idleBtn.implicitWidth : 0
+            implicitWidth: root.isHovered ? inactiveRow.implicitWidth : 0
             clip: true
             visible: implicitWidth > 0
 
@@ -221,20 +195,74 @@ Item {
                 NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
             }
 
-            IconButton {
-                id: idleBtn
-                bar: root.bar
-                iconText: "󱫖"
-                color: root.stayAwakeActive ? "#bf616a" : "#4c566a"
-                opacity: root.stayAwakeActive ? 1.0 : 0.7
-                paddingHorizontal: 4
-                tooltipText: root.stayAwakeActive ?
-                    "Idle Lock: Disabled (Stay Awake)\nClick to enable" :
-                    "Idle Lock: Enabled\nClick to disable"
+            Row {
+                id: inactiveRow
+                spacing: 2
+                anchors.verticalCenter: parent.verticalCenter
 
-                onClicked: {
-                    root.runCmd("toggle-idle");
-                    root.refreshSoon();
+                // 1. Music (Inactive)
+                IconButton {
+                    id: musicInactiveBtn
+                    visible: !root.cliampRunning
+                    bar: root.bar
+                    iconText: ""
+                    color: "#4c566a"
+                    opacity: 0.5
+                    paddingHorizontal: 4
+                    tooltipText: "Music (cliamp)\nLeft-click: Launch cliamp\nRight-click: Play / Pause"
+                    onClicked: root.runCmd("launch-or-focus-tui cliamp")
+                    onRightClicked: {
+                        root.runCmd("playerctl play-pause 2>/dev/null");
+                        root.refreshSoon();
+                    }
+                }
+
+                // 2. Screensaver (Inactive)
+                IconButton {
+                    id: screensaverInactiveBtn
+                    visible: !root.screensaverOff
+                    bar: root.bar
+                    iconText: "󱄄"
+                    color: "#4c566a"
+                    opacity: 0.5
+                    paddingHorizontal: 4
+                    tooltipText: "Screensaver: Enabled\nClick to disable"
+                    onClicked: {
+                        root.runCmd("toggle-screensaver");
+                        root.refreshSoon();
+                    }
+                }
+
+                // 3. Nightlight (Inactive)
+                IconButton {
+                    id: nightlightInactiveBtn
+                    visible: !root.nightlightOn
+                    bar: root.bar
+                    iconText: "󰔎"
+                    color: "#4c566a"
+                    opacity: 0.5
+                    paddingHorizontal: 4
+                    tooltipText: "Nightlight: Inactive (6000K)\nClick to toggle nightlight"
+                    onClicked: {
+                        root.runCmd("toggle-nightlight");
+                        root.refreshSoon();
+                    }
+                }
+
+                // 4. Idle Lock (Inactive)
+                IconButton {
+                    id: idleInactiveBtn
+                    visible: !root.stayAwakeActive
+                    bar: root.bar
+                    iconText: "󱫖"
+                    color: "#4c566a"
+                    opacity: 0.5
+                    paddingHorizontal: 4
+                    tooltipText: "Idle Lock: Enabled\nClick to disable"
+                    onClicked: {
+                        root.runCmd("toggle-idle");
+                        root.refreshSoon();
+                    }
                 }
             }
         }

@@ -30,4 +30,10 @@ RowLayout {
         }
         onRightClicked: root.runCmd("xdg-terminal-exec")
     }
+
+    // Actions Bar (Status indicators & quick toggles)
+    ActionsBar {
+        id: actionsBar
+        bar: root.bar
+    }
 }

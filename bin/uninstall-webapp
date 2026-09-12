@@ -3,7 +3,7 @@
 set -e
 
 # Correct paths based on install-webapp script
-ICON_DIR="$HOME/.local/share/web-apps/icons"
+ICON_DIR="$HOME/.local/share/applications/icons"
 DESKTOP_DIR="$HOME/.local/share/applications"
 
 # Array to hold app names
@@ -45,7 +45,6 @@ fi
 
 for APP_NAME in "${APP_NAMES[@]}"; do
   DESKTOP_FILE_PATH="$DESKTOP_DIR/$APP_NAME.desktop"
-  ICON_FILE_PATH="$ICON_DIR/$APP_NAME.png"
   
   if [ -f "$DESKTOP_FILE_PATH" ]; then
     rm -f "$DESKTOP_FILE_PATH"
@@ -54,15 +53,7 @@ for APP_NAME in "${APP_NAMES[@]}"; do
     echo "Desktop file for '$APP_NAME' not found."
   fi
   
-  # Note: This only removes icons that were downloaded by the install script.
-  # If you specified an existing system icon name or a path to your own icon,
-  # the original icon file will not be removed, which is the safer default.
-  if [ -f "$ICON_FILE_PATH" ]; then
-    rm -f "$ICON_FILE_PATH"
-    echo "Removed icon: $ICON_FILE_PATH"
-  else
-    echo "Icon for '$APP_NAME' not found at $ICON_FILE_PATH (this is expected if the app used a system icon)."
-  fi
+  rm -f "$ICON_DIR/$APP_NAME".* 2>/dev/null || true
   
   echo "--- Uninstalled '$APP_NAME' ---"
 done

@@ -1,97 +1,187 @@
 #!/usr/bin/env zsh
 
-set -e
-
 # Setup core directories
 DESKTOP_DIR="$HOME/.local/share/applications"
 ICON_DIR="$DESKTOP_DIR/icons"
 mkdir -p "$ICON_DIR" "$DESKTOP_DIR"
 
-BROWSER_DIR="$HOME/.config/chromium/Default"
-FAVICON_DB="$BROWSER_DIR/Favicons"
+# -----------------------------------------------------------------------------
+# Favicon & Icon Resolution Helper
+# -----------------------------------------------------------------------------
+resolve_icon() {
+  local app_name="$1"
+  local app_url="$2"
+  local icon_ref="$3"
+
+  local domain
+  domain=$(echo "$app_url" | awk -F'/' '{print $3}')
+  [[ -z "$domain" ]] && domain="$app_name"
+
+  local target_icon="$ICON_DIR/$app_name.png"
+
+  # Expand tilde if provided
+  if [[ "$icon_ref" == \~/* ]]; then
+    icon_ref="${HOME}${icon_ref#\~}"
+  fi
+
+  # Case 1: Direct Web URL provided for icon
+  if [[ "$icon_ref" =~ ^https?:// ]]; then
+    echo "Downloading icon from specified URL..."
+    local ext="${icon_ref##*.}"
+    ext="${ext%%\?*}"
+    [[ "$ext" =~ ^(svg|png|jpg|jpeg|ico|webp)$ ]] || ext="png"
+    target_icon="$ICON_DIR/$app_name.$ext"
+    if curl -sSL -f "$icon_ref" -o "$target_icon" 2>/dev/null && [[ -s "$target_icon" ]]; then
+      echo "✓ Downloaded custom icon."
+      echo "$target_icon"
+      return 0
+    fi
+    echo "Warning: Failed to download from $icon_ref. Falling back to auto-fetch."
+  fi
+
+  # Case 2: Local file path provided
+  if [[ -n "$icon_ref" && -f "$icon_ref" ]]; then
+    echo "Copying local icon file..."
+    local ext="${icon_ref##*.}"
+    target_icon="$ICON_DIR/$app_name.$ext"
+    cp "$icon_ref" "$target_icon"
+    echo "✓ Copied local icon: $target_icon"
+    echo "$target_icon"
+    return 0
+  fi
+
+  # Case 3: System theme icon name provided (e.g. "whatsapp", "chromium", "web-browser")
+  if [[ -n "$icon_ref" && ! "$icon_ref" =~ ^https?:// && ! "$icon_ref" =~ / ]]; then
+    echo "Using system icon: $icon_ref"
+    echo "$icon_ref"
+    return 0
+  fi
+
+  # Case 4: Auto-extract from Chromium / Chrome / Brave browser history
+  local sqlite_cmd=""
+  if command -v sqlite3 &>/dev/null; then
+    sqlite_cmd="sqlite3"
+  fi
+
+  if [[ -n "$sqlite_cmd" ]]; then
+    local db_candidates=(
+      $HOME/.config/chromium/*/Favicons(N)
+      $HOME/.config/chromium/Default/Favicons(N)
+      $HOME/.config/google-chrome/*/Favicons(N)
+      $HOME/.config/BraveSoftware/Brave-Browser/*/Favicons(N)
+    )
+    for db in "${db_candidates[@]}"; do
+      if [[ -f "$db" ]]; then
+        local tmp_db
+        tmp_db=$(mktemp)
+        if cp "$db" "$tmp_db" 2>/dev/null; then
+          local has_icon
+          has_icon=$($sqlite_cmd "$tmp_db" "SELECT count(*) FROM favicon_bitmaps JOIN favicons ON favicons.id = favicon_bitmaps.icon_id WHERE favicons.url LIKE '%$domain%';" 2>/dev/null || echo "0")
+          if [[ "$has_icon" -gt 0 ]]; then
+            echo "Extracting icon from browser cache..."
+            $sqlite_cmd "$tmp_db" \
+              "SELECT writefile('$target_icon', image_data) 
+               FROM favicon_bitmaps 
+               JOIN favicons ON favicons.id = favicon_bitmaps.icon_id 
+               WHERE favicons.url LIKE '%$domain%' 
+               ORDER BY width DESC LIMIT 1;" 2>/dev/null
+            rm -f "$tmp_db"
+            if [[ -s "$target_icon" ]]; then
+              echo "✓ Extracted icon from browser cache: $target_icon"
+              echo "$target_icon"
+              return 0
+            fi
+          fi
+          rm -f "$tmp_db"
+        fi
+      fi
+    done
+  fi
+
+  # Case 5: Auto-fetch high-resolution icon from web (Google favicon API)
+  echo "Fetching high-resolution icon from web for $domain..."
+  if curl -sSL -f "https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://${domain}&size=256" -o "$target_icon" 2>/dev/null && [[ -s "$target_icon" ]]; then
+    if [[ $(wc -c < "$target_icon") -gt 100 ]]; then
+      echo "✓ Fetched high-resolution icon: $target_icon"
+      echo "$target_icon"
+      return 0
+    else
+      rm -f "$target_icon"
+    fi
+  fi
+
+  # Case 5b: Direct favicon.ico fallback
+  local ico_path="$ICON_DIR/$app_name.ico"
+  if curl -sSL -f "https://${domain}/favicon.ico" -o "$ico_path" 2>/dev/null && [[ -s "$ico_path" ]]; then
+    if [[ $(wc -c < "$ico_path") -gt 100 ]]; then
+      echo "✓ Fetched favicon.ico: $ico_path"
+      echo "$ico_path"
+      return 0
+    else
+      rm -f "$ico_path"
+    fi
+  fi
+
+  # Case 6: Fallback to generic system icon
+  echo "Using default application icon."
+  echo "applications-internet"
+}
 
 # -----------------------------------------------------------------------------
 # Core Functions
 # -----------------------------------------------------------------------------
 
 add_web_app() {
-  if [ "$#" -lt 3 ]; then
-    echo -e "\e[32mLet's create a new web app you can start with the app launcher.\n\e[0m"
-    APP_NAME=$(gum input --prompt "Name> " --placeholder "My favorite web app")
-    APP_URL=$(gum input --prompt "URL> " --placeholder "https://example.com")
-    ICON_REF=$(gum input --prompt "Icon URL, path or name (Leave blank to use Helium cache)> " --placeholder "Press Enter to extract from browser")
-    CUSTOM_EXEC=""
-    MIME_TYPES=""
-    INTERACTIVE_MODE=true
-  else
+  local APP_NAME=""
+  local APP_URL=""
+  local ICON_REF=""
+  local CUSTOM_EXEC=""
+  local MIME_TYPES=""
+  local INTERACTIVE_MODE=false
+
+  if [ "$#" -ge 2 ]; then
     APP_NAME="$1"
     APP_URL="$2"
-    ICON_REF="$3"
-    CUSTOM_EXEC="$4"
-    MIME_TYPES="$5" 
-    INTERACTIVE_MODE=false
+    ICON_REF="${3:-}"
+    CUSTOM_EXEC="${4:-}"
+    MIME_TYPES="${5:-}"
+  else
+    echo -e "\e[32mLet's create a new web app you can start with the app launcher.\n\e[0m"
+    APP_NAME=$(gum input --prompt "Name> " --placeholder "e.g. WhatsApp")
+    APP_URL=$(gum input --prompt "URL> " --placeholder "e.g. https://web.whatsapp.com")
+    ICON_REF=$(gum input --prompt "Icon URL, path or name (leave blank for auto-fetch)> " --placeholder "Press Enter to auto-fetch")
+    INTERACTIVE_MODE=true
   fi
+
+  # Trim leading and trailing whitespace
+  APP_NAME="$(echo -e "${APP_NAME}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+  APP_URL="$(echo -e "${APP_URL}" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
 
   if [[ -z "$APP_NAME" || -z "$APP_URL" ]]; then
     echo "You must set at least an app name and app URL!"
-    exit 1
-  fi
-
-  if [[ "$ICON_REF" == \~/* ]]; then
-    ICON_REF="${HOME}${ICON_REF#\~}"
-  fi
-
-  ICON_PATH="$ICON_DIR/$APP_NAME.png"
-
-  if command -v sqlite3 &> /dev/null; then
-    SQLITE_CMD="sqlite3"
-  elif command -v nix &> /dev/null; then
-    echo "sqlite3 not found locally. Using 'nix run' fallback..."
-    SQLITE_CMD="nix run nixpkgs#sqlite --"
-  else
-    echo "Error: Neither sqlite3 nor nix found. Cannot parse browser database."
-    exit 1
-  fi
-
-
-  if [[ $ICON_REF =~ ^https?:// || -z "$ICON_REF" ]]; then
-    echo "Attempting to extract icon from Helium browser history..."
-    
-    if [ ! -f "$FAVICON_DB" ]; then
-      echo "Error: Favicon database not found at $FAVICON_DB"
-      exit 1
+    if [[ "$INTERACTIVE_MODE" == true ]]; then
+      echo "Press Enter to return..."
+      read -r
     fi
-
-    TMP_DB=$(mktemp)
-    cp "$FAVICON_DB" "$TMP_DB"
-    DOMAIN=$(echo "$APP_URL" | awk -F/ '{print $3}')
-    
-    ${=SQLITE_CMD} "$TMP_DB" \
-      "SELECT writefile('$ICON_PATH', image_data) 
-       FROM favicon_bitmaps 
-       JOIN favicons ON favicons.id = favicon_bitmaps.icon_id 
-       WHERE favicons.url LIKE '%$DOMAIN%' 
-       ORDER BY width DESC LIMIT 1;" > /dev/null
-
-    rm "$TMP_DB"
-
-    if [ ! -s "$ICON_PATH" ]; then
-      rm -f "$ICON_PATH"
-      echo "Could not find a cached icon for $DOMAIN in your Helium profile."
-      ICON_PATH=$(gum input --prompt "Icon fallback (path or icon name)> " --placeholder "helium")
-    else
-      echo "Successfully pulled live tab icon from Helium!"
-    fi
-
-  elif [[ -f "$ICON_REF" ]]; then
-    echo "Copying local file icon..."
-    cp "$ICON_REF" "$ICON_PATH"
-  else
-    ICON_PATH="$ICON_REF"
+    return 1
   fi
 
-  EXEC_COMMAND="${CUSTOM_EXEC:-launch-webapp $APP_URL}"
-  DESKTOP_FILE="$DESKTOP_DIR/$APP_NAME.desktop"
+  # Ensure URL has https:// protocol
+  if [[ ! "$APP_URL" =~ ^https?:// ]]; then
+    APP_URL="https://$APP_URL"
+  fi
+
+  # Resolve icon
+  local ICON_RESOLVER_OUTPUT
+  ICON_RESOLVER_OUTPUT=$(resolve_icon "$APP_NAME" "$APP_URL" "$ICON_REF")
+  # The last line of resolve_icon is the final icon path or name
+  local ICON_PATH
+  ICON_PATH=$(echo "$ICON_RESOLVER_OUTPUT" | tail -n 1)
+  # Print preceding diagnostic messages
+  echo "$ICON_RESOLVER_OUTPUT" | sed '$d'
+
+  local EXEC_COMMAND="${CUSTOM_EXEC:-launch-webapp $APP_URL}"
+  local DESKTOP_FILE="$DESKTOP_DIR/$APP_NAME.desktop"
 
   cat >"$DESKTOP_FILE" <<EOF
 [Desktop Entry]
@@ -103,7 +193,7 @@ Terminal=false
 Type=Application
 Icon=$ICON_PATH
 StartupNotify=true
-Categories=WebApp;
+Categories=WebApp;Network;
 EOF
 
   if [[ -n $MIME_TYPES ]]; then
@@ -111,11 +201,16 @@ EOF
   fi
 
   chmod +x "$DESKTOP_FILE"
-  update-desktop-database -q "$DESKTOP_DIR" &> /dev/null || true
+  update-desktop-database -q "$DESKTOP_DIR" 2>/dev/null || true
 
-  if [[ $INTERACTIVE_MODE == true ]]; then
-    echo -e "\\nYou can now find '$APP_NAME' using the app launcher (SUPER + SPACE)\\n"
-    echo "Press Enter to close this window..."
+  echo -e "\n\e[32m✓ Web app '$APP_NAME' created successfully!\e[0m"
+  echo "  • Launcher: $DESKTOP_FILE"
+  echo "  • Icon: $ICON_PATH"
+  echo "  • Command: $EXEC_COMMAND"
+
+  if [[ "$INTERACTIVE_MODE" == true ]]; then
+    echo -e "\nYou can now find '$APP_NAME' using the app launcher (SUPER + SPACE).\n"
+    echo "Press Enter to return..."
     read -r
   fi
 }
@@ -123,10 +218,8 @@ EOF
 delete_web_app() {
   echo -e "\e[31mSelect Web Apps to remove (Space to select, Enter to confirm):\n\e[0m"
   
-  # Find all managed desktop configurations inside your local directory belonging to WebApp category
-  # Filter them to grab just the plain file names cleanly
   local targets=()
-  for f in "$DESKTOP_DIR"/*.desktop; do
+  for f in "$DESKTOP_DIR"/*.desktop(N); do
     if [ -f "$f" ] && grep -q "Categories=.*WebApp" "$f"; then
       targets+=("$(basename "$f" .desktop)")
     fi
@@ -139,24 +232,25 @@ delete_web_app() {
     return
   fi
 
-  # Present list via interactive multi-select filter interface
+  local CHOICES
   CHOICES=$(printf "%s\n" "${targets[@]}" | gum filter --no-limit --placeholder="Search apps to remove...")
 
   if [ -z "$CHOICES" ]; then
     echo "Deletion cancelled. No apps selected."
+    echo "Press Enter to return..."
+    read -r
     return
   fi
 
-  # Iterate choices and securely remove desktop launch files and icons
   echo "$CHOICES" | while read -r TARGET; do
     if [ -n "$TARGET" ]; then
       echo "Removing $TARGET..."
       rm -f "$DESKTOP_DIR/$TARGET.desktop"
-      rm -f "$ICON_DIR/$TARGET.png"
+      rm -f "$ICON_DIR/$TARGET".*
     fi
   done
 
-  update-desktop-database -q "$DESKTOP_DIR" &> /dev/null || true
+  update-desktop-database -q "$DESKTOP_DIR" 2>/dev/null || true
   echo -e "\nSuccessfully cleaned up selected Web Apps!"
   echo "Press Enter to return..."
   read -r
@@ -166,26 +260,29 @@ delete_web_app() {
 # Main Entry Point Execution Routing
 # -----------------------------------------------------------------------------
 
-# If parameters are passed, completely skip interactive menus and execute directly
+# If parameters are passed, execute directly
 if [ "$#" -gt 0 ]; then
   add_web_app "$@"
   exit 0
 fi
 
-# Otherwise, pull up the new clean Master Submenu layout
-echo -e "\e[34m== Web App Submenu ==\e[0m"
-ACTION=$(gum choose "Add Web App" "Delete Web App" "Exit")
+# Otherwise, present interactive menu
+while true; do
+  clear
+  echo -e "\e[34m== Web App Manager ==\e[0m"
+  ACTION=$(gum choose "Add Web App" "Delete Web App" "Exit")
 
-case "$ACTION" in
-  "Add Web App")
-    clear
-    add_web_app
-    ;;
-  "Delete Web App")
-    clear
-    delete_web_app
-    ;;
-  *)
-    exit 0
-    ;;
-esac
+  case "$ACTION" in
+    "Add Web App")
+      clear
+      add_web_app
+      ;;
+    "Delete Web App")
+      clear
+      delete_web_app
+      ;;
+    *)
+      exit 0
+      ;;
+  esac
+done

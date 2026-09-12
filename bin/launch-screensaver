@@ -13,9 +13,6 @@ if [[ -f ~/.config/screensaver-off ]] && [[ $1 != "force" ]]; then
   exit 1
 fi
 
-# Silently quit Walker if installed
-command -v walker &>/dev/null && walker -q
-
 focused=$(hyprctl monitors -j | jq -r '.[] | select(.focused == true).name')
 terminal=$(xdg-terminal-exec --print-id)
 

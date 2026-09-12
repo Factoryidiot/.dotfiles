@@ -839,7 +839,7 @@ RowLayout {
             tooltipText: batModule.getTooltipText()
             paddingHorizontal: 3
 
-            onClicked: root.runCmd("launch-menu power")
+            onClicked: root.runCmd("quickshell ipc call menu power")
             onRightClicked: root.runCmd('notify-send -u low "$(battery-status)"')
         }
     }

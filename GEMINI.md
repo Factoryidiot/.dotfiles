@@ -23,26 +23,22 @@ This allows for version control of the configuration while keeping the files in 
 
 ## Directory Structure & Purpose
 
-- **`bin/`**: Contains various utility shell scripts for managing the desktop session, such as launching applications, handling screensavers (`screensaver.txt`, `toggle-screensaver`), and managing window focus (`launch-or-focus`).
+- **`bin/`**: Contains utility shell scripts for managing desktop session tasks, such as launching applications, controlling screensavers, audio, weather, and window focus (`launch-or-focus-tui`, `cmd-screensaver`).
 
-- **`elephant/`**: Holds configuration files (`.toml`) for what appears to be an application menu or launcher system.
+- **`cliamp/`**: Configuration for `cliamp`, the terminal music player.
 
-- **`fastfetch/`**: Configuration for `fastfetch`, a tool for displaying system information in the terminal.
+- **`fastfetch/`**: Configuration for `fastfetch`, displaying system information in the terminal.
 
-- **`flatpak/`**: Contains configuration for Flatpak, a sandboxed application packaging format.
+- **`ghostty/`**: Configuration for the `ghostty` terminal emulator and screensaver terminal instance.
 
-- **`github/`**: Includes environment setup scripts (`env.sh`) likely used for configuring Git or GitHub-related tools.
+- **`hypr/`**: Hyprland compositor configuration using native Lua (`hyprland.lua` & `modules/`) alongside auxiliary daemon configs (`hypridle.conf`, `hyprlock.conf`, `hyprsunset.conf`, `theme.conf`).
 
-- **`hypr/`**: This is the core of the desktop configuration, using Lua configuration files (`hyprland.lua` & `modules/`) alongside auxiliary daemon configs (`hypridle.conf`, `hyprlock.conf`, `hyprsunset.conf`, `theme.conf`):
-    - `hyprland.lua`: Main Lua entry point loading `modules/`.
-    - `modules/`: Modular Lua configuration files (autostart, envs, input, looknfeel, monitors, windows, keybindings).
-    - `hypridle.conf`, `hyprlock.conf`, `hyprsunset.conf`, `theme.conf`: Configuration for idle management, screen locking, blue-light control, and lockscreen themes.
-    - `deprecated/`: Holds legacy `.conf` files (`autostart.conf`, `envs.conf`, `hyprland.conf`, `input.conf`, `keybindings.conf`, `looknfeel.conf`, `monitors.conf`, `windows.conf`).
+- **`quickshell/`**: Desktop shell and notification daemon written in QML (top status bar, menus, volume/brightness/battery monitors, and native DBus notification daemon).
 
-- **`tmux/`**: Configuration for `tmux`, a terminal multiplexer.
+- **`starship/`**: Configuration for the `starship` cross-shell prompt (`starship.toml`).
 
-- **`walker/`**: Configuration and styling (`.xml`, `.css`) for `walker`, which seems to be an application runner or launcher.
+- **`tmux/`**: Configuration for `tmux`, the terminal multiplexer.
 
-- **`waybar/`**: Configuration (`config.jsonc`) and styling (`style.css`) for `waybar`, a status bar for Wayland compositors.
+- **`vm-curator/`**: Configuration for `vm-curator`, managing local virtual machines.
 
-- **`zsh/`**: Contains configuration files for the Zsh shell, including prompt customization with Powerlevel10k (`.p10k.zsh`).
+- **`weather/`**: Configuration (`locations.json`) for local weather fetching and reporting.

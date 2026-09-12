@@ -8,6 +8,7 @@ Item {
     id: root
 
     property var bar: null
+    property var menu: null
     property bool isHovered: false
 
     // State properties
@@ -24,6 +25,14 @@ Item {
     function runCmd(cmd) {
         Quickshell.execDetached(["zsh", "-c", cmd]);
         refreshSoon();
+    }
+
+    function toggleActionsMenu() {
+        if (root.menu) {
+            root.menu.toggle("actions");
+        } else {
+            root.runCmd("quickshell ipc call menu actions");
+        }
     }
 
     function refreshSoon() {
@@ -91,30 +100,18 @@ Item {
             }
         }
 
-        // Trigger drawer icon: only shown when NO actions are active
-        Item {
-            id: triggerWrapper
-            implicitHeight: 24
-            implicitWidth: (!root.hasActive) ? triggerBtn.implicitWidth : 0
-            clip: true
-            visible: implicitWidth > 0
-
-            Behavior on implicitWidth {
-                NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
-            }
-
-            IconButton {
-                id: triggerBtn
-                bar: root.bar
-                iconText: "󱓞"
-                color: root.isHovered ? "#88c0d0" : "#4c566a"
-                paddingHorizontal: 4
-                tooltipText: "Actions Bar\nHover to reveal actions\nClick: Actions Menu"
-                onClicked: root.runCmd("quickshell -p ~/.dotfiles/quickshell ipc call menu actions")
-            }
+        // Actions (rocket) icon: permanently visible in place with low / dim visibility
+        IconButton {
+            id: triggerBtn
+            bar: root.bar
+            iconText: "󱓞"
+            color: root.isHovered ? "#88c0d0" : "#4c566a"
+            paddingHorizontal: 4
+            tooltipText: "Actions (Super + Alt + Space > Actions)\nHover: Reveal action toggles\nClick: Actions Menu"
+            onClicked: root.toggleActionsMenu()
         }
 
-        // Active Actions block (permanently visible, anchored on left)
+        // Active Actions block: permanently visible when active, to the right of the rocket icon
         Row {
             id: activeRow
             spacing: 2

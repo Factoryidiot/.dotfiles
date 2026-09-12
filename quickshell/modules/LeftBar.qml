@@ -25,7 +25,7 @@ RowLayout {
             if (root.menu) {
                 root.menu.toggle();
             } else {
-                root.runCmd("quickshell -p ~/.dotfiles/quickshell ipc call menu toggle");
+                root.runCmd("quickshell ipc call menu toggle");
             }
         }
         onRightClicked: root.runCmd("xdg-terminal-exec")
@@ -35,5 +35,6 @@ RowLayout {
     ActionsBar {
         id: actionsBar
         bar: root.bar
+        menu: root.menu
     }
 }

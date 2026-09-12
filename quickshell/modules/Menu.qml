@@ -140,10 +140,10 @@ PanelWindow {
 
     // Actions Submenu
     readonly property var actionItems: [
-        { id: "act-cliamp", name: "Music (cliamp)", glyph: "", exec: "launch-or-focus-tui cliamp" },
+        { id: "act-cliamp", name: "Music", glyph: "", exec: "launch-or-focus-tui cliamp" },
         { id: "act-screenshot", name: "Screenshot (Interactive)", glyph: "", exec: "cmd-screenshot smart" },
         { id: "act-screenshot-clip", name: "Screenshot (To Clipboard)", glyph: "", exec: "cmd-screenshot smart clipboard" },
-        { id: "act-colorpicker", name: "Color Picker (Hyprpicker)", glyph: "󰃉", exec: "pkill hyprpicker || hyprpicker -a" },
+        { id: "act-colorpicker", name: "Colour Picker", glyph: "󰃉", exec: "pkill hyprpicker || hyprpicker -a" },
         { id: "act-share-clip", name: "Share Clipboard", glyph: "", exec: "cmd-share clipboard" },
         { id: "act-share-file", name: "Share File", glyph: "", exec: "xdg-terminal-exec --app-id=dot.nix.terminal bash -c 'cmd-share file'" },
         { id: "act-toggle-screensaver", name: "Toggle Screensaver", glyph: "󱄄", exec: "toggle-screensaver" },

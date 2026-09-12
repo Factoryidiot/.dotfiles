@@ -126,7 +126,7 @@ Item {
                 iconText: ""
                 color: "#88c0d0"
                 paddingHorizontal: 4
-                tooltipText: "Music (cliamp - Running)\nLeft-click: Focus\nRight-click: Play / Pause"
+                tooltipText: "Left-click: Focus\nRight-click: Play / Pause"
                 onClicked: root.runCmd("launch-or-focus-tui cliamp")
                 onRightClicked: {
                     root.runCmd("playerctl play-pause 2>/dev/null");
@@ -206,7 +206,7 @@ Item {
                     color: "#4c566a"
                     opacity: 0.5
                     paddingHorizontal: 4
-                    tooltipText: "Music (cliamp)\nLeft-click: Launch cliamp\nRight-click: Play / Pause"
+                    tooltipText: "Left-click: Launch\nRight-click: Play / Pause"
                     onClicked: root.runCmd("launch-or-focus-tui cliamp")
                     onRightClicked: {
                         root.runCmd("playerctl play-pause 2>/dev/null");

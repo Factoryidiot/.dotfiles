@@ -1,0 +1,15 @@
+---
+# ~/.dotfiles/tahi/dashboard/settings.yaml
+title: Tahi Homelab
+theme: dark
+color: zinc
+layout:
+  Media & Automation:
+    style: row
+    columns: 4
+  Network & Infrastructure:
+    style: row
+    columns: 4
+  Monitoring & Observability:
+    style: row
+    columns: 2

@@ -1,0 +1,7 @@
+---
+# ~/.dotfiles/tahi/dashboard/widgets.yaml
+- resources:
+    cpu: true
+    memory: true
+    cputemp: true
+    disk: /storage/data

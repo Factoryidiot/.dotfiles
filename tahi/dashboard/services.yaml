@@ -1,11 +1,6 @@
 ---
 # ~/.dotfiles/tahi/dashboard/services.yaml
-- Media & Automation:
-    - Jellyfin:
-        icon: jellyfin.svg
-        href: https://jellyfin.lan
-        description: Media Streaming Server
-        ping: http://172.16.1.220:8096
+- Downloads & Automation:
     - SABnzbd:
         icon: sabnzbd.svg
         href: https://sabnzbd.lan
@@ -48,6 +43,13 @@
         href: https://qbit.lan
         description: Torrent Client
         ping: http://172.16.1.211:8085
+
+- Media:
+    - Jellyfin:
+        icon: jellyfin.svg
+        href: https://jellyfin.lan
+        description: Media Streaming Server
+        ping: http://172.16.1.220:8096
 
 - Network & Infrastructure:
     - Pi-hole:

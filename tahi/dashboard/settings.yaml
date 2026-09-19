@@ -4,9 +4,12 @@ title: Tahi Homelab
 theme: dark
 color: zinc
 layout:
-  Media & Automation:
+  Downloads & Automation:
     style: row
-    columns: 4
+    columns: 3
+  Media:
+    style: row
+    columns: 3
   Network & Infrastructure:
     style: row
     columns: 4
